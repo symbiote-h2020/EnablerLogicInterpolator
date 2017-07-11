@@ -1,0 +1,35 @@
+language: java
+env:
+  global:
+  - GITHUB_REPO=symbiote-h2020/EnablerLogicInterpolator
+  - secure: DqU9Q1KIKajRwROYVIQrYG0f1d7mOX2iE8xP+V2gtqCoEPwpu/2TuRyU/3pIsyc1eyZyB1xExcAQLKaLnqVEA34bg4L0sewG2oJT+kEQgyVzIISA6PHlGUoKN5nI/IlJXb7Rc9BL12QkFFaXM2A463KPK03qAObEg9GjHLLNjE0nNe7W1cK1hVln+wHjVUh18Vnza1NYYE8IQ7ehdXgs3V7rI63c069AgVfDnFbm9PuWpzxMgDjC6pjMyZYWzDa6V9MBDQYrIn1PZ5ek9wLlhytgqCN9ldJEuzuf69gFSaFAnsUVQ7w7iLOuDXms989sZ2UwCFxZkyYzt9MNS4j9iCvdYERe08CFPy7hxIon+6tbgUeRNzBdTNerbQBKeDT3yTkwzSOU30+UPAYSVPAMwzzly4F44wsM1qHcZJjqEWg/L2Kk65alqQIUHClrFj5umRS4nZw37BLY47xPlK3OhDsg0FY+t5ijy7U37NSX12/iCpqMW1jnwfKY+yIETLbGzz8AmknqZXtSTVYlrq/+NvkknBuNf/QSGRs0K9zudmXOjTVBNMB5hEWmotpRSzqkZu7rro34dPbvvrWvp+8mbzbWdP99SSrWqyNrFYkHHiS7koeFFeTGhwQkk7qJzrBenGPKb/vRm513GYJuyi8YfFovWVpGButKirH7nuiBJHA=
+jdk:
+- oraclejdk8
+services:
+- mongodb
+- rabbitmq
+sudo: required
+branches:
+  only:
+  - staging
+install: true
+before_cache:
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+before_script:
+- chmod a+x merge_script.sh
+- "./merge_script.sh"
+script:
+- gradle check --refresh-dependencies
+after_success:
+- chmod a+x pushing_script.sh
+- "./pushing_script.sh"
+- bash <(curl -s https://codecov.io/bash)
+notifications:
+  email:
+    on_success: never
+    on_failure: always
