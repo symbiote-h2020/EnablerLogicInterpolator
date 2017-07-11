@@ -1,4 +1,4 @@
-package eu.h2020.symbiote.eli;
+package eu.h2020.symbiote.smeur.eli;
 
 /**
  * Created by mateuszl on 30.09.2016.
