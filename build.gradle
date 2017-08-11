@@ -1,0 +1,75 @@
+buildscript {
+    ext {
+        springBootVersion = '1.5.4.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+// code
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+
+group = 'eu.h2020.symbiote'
+version = '0.0.1-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+//jar {
+//    baseName = 'EnablerLogicInterpolator'
+//    version =  project.version
+//}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+// Spring related configs
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:Dalston.SR1"
+    }
+}
+
+configurations.all {
+    // check for updates every build
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+dependencies {
+
+    /* SymbIoTeLibraries manual:
+        One can use the library from jitpack by default with the notation:
+            compile('com.github.symbiote-h2020:SymbIoTeLibraries:develop-SNAPSHOT') {changing = true }
+        or having cloned locally the SymbIoTeLibraries repo use it directly with project dependency by:
+            compile project(':SymbIoTeLibraries')
+        Important --- In order to use the latter you need to:
+            1) switch comments on the artifact and project dependencies
+            2) always have only one uncommented
+            3) project dependency requires changes in settings.gradle file in this project
+            4) never commit build.gradle which has project dependencies active as it will break CI builds
+    */
+    //compile('com.github.symbiote-h2020:SymbIoTeLibraries:develop-SNAPSHOT') { changing = true }
+    // from local maven repository
+    compile('eu.h2020.symbiote:SymbIoTeLibraries:1.0.1-SNAPSHOT')
+
+
+
+    // Spring
+    compile('org.springframework.cloud:spring-cloud-starter-config')
+    compile('org.springframework.cloud:spring-cloud-starter-eureka')
+    compile('org.springframework.cloud:spring-cloud-starter-zipkin')
+    
+    // from local maven repository
+	compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+
+    // test only
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+    //testCompile('com.github.tomakehurst:wiremock')
+}
