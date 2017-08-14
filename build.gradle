@@ -13,6 +13,7 @@ buildscript {
 // code
 apply plugin: 'java'
 apply plugin: 'org.springframework.boot'
+apply plugin: 'eclipse'
 
 group = 'eu.h2020.symbiote'
 version = '0.0.1-SNAPSHOT'
@@ -37,6 +38,12 @@ dependencyManagement {
     }
 }
 
+allprojects {
+	repositories {
+		maven { url 'https://jitpack.io' }
+	}
+}
+
 configurations.all {
     // check for updates every build
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
@@ -57,7 +64,7 @@ dependencies {
     */
     //compile('com.github.symbiote-h2020:SymbIoTeLibraries:develop-SNAPSHOT') { changing = true }
     // from local maven repository
-    compile('eu.h2020.symbiote:SymbIoTeLibraries:1.0.1-SNAPSHOT')
+    //compile('eu.h2020.symbiote:SymbIoTeLibraries:1.0.1-SNAPSHOT')
 
 
 
@@ -67,9 +74,17 @@ dependencies {
     compile('org.springframework.cloud:spring-cloud-starter-zipkin')
     
     // from local maven repository
-	compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+    compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+    // from jitpck
+    //compile('com.github.symbiote-h2020:EnablerLogic:develop-SNAPSHOT')
 
     // test only
     testCompile('org.springframework.boot:spring-boot-starter-test')
     //testCompile('com.github.tomakehurst:wiremock')
+}
+
+eclipse {
+    classpath {
+       downloadSources=true
+    }
 }

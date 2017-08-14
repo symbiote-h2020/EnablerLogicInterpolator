@@ -41,7 +41,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		request.setTaskId("Vienna-Fixed");
 		request.setEnablerLogicName("interpolator");
 		request.setMinNoResources(1);
-		request.setCachingInterval_ms(3600L); // 10 mins.
+		request.setCachingInterval("P0000-00-00T00:10:00"); // 10 mins.
 		// Although the sampling period is either 30 mins or 60 mins there is a transmit
 									// delay.
 									// If we miss one reading by just 1 second and we set the interval to 30 mins we
@@ -67,7 +67,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		request.setTaskId("Vienna-Mobile");
 		request.setEnablerLogicName("interpolator");
 		request.setMinNoResources(1);
-		request.setCachingInterval_ms(360L); // 1 min
+		request.setCachingInterval("P0000-00-00T00:01:00"); // 1 min
 
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
 		coreQueryRequest.setLocation_lat(48.208174);
