@@ -1,7 +1,6 @@
 package eu.h2020.symbiote.smeur.eli;
 
 import java.util.Arrays;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +15,8 @@ import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
+import eu.h2020.symbiote.smeur.eli.model.MessageRequest;
+import eu.h2020.symbiote.smeur.eli.model.MessageResponse;
 
 @Component
 public class InterpolatorLogic implements ProcessingLogic {
@@ -24,12 +25,43 @@ public class InterpolatorLogic implements ProcessingLogic {
 	private EnablerLogic enablerLogic;
 
 	@Override
-	public void init(EnablerLogic enablerLogic) {
+	public void initialization(EnablerLogic enablerLogic) {
 		this.enablerLogic = enablerLogic;
     
+		asyncCommunication();
+		syncCommunication();
+
 		queryFixedStations();
 		queryMobileStations();
+		
 	}
+
+    private void asyncCommunication() {
+        // asynchronous communications to another Enabler Logic component
+		// register consumer for message type EnablerLogicDataAppearedMessage
+        enablerLogic.registerAsyncMessageFromEnablerLogicConsumer(
+            EnablerLogicDataAppearedMessage.class, 
+            (m) -> log.info("Received from another EnablerLogic: {}", m));
+		
+		// send myself async message
+        enablerLogic.sendAsyncMessageToEnablerLogic("EnablerLogicInterpolator", new EnablerLogicDataAppearedMessage());
+    }
+    
+    private void syncCommunication() {
+        // synchronous communication to another Enabler Logic component
+        // register function for synchronous communication
+        enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
+            MessageRequest.class, 
+            (m) -> new MessageResponse("response: " + m.getRequest()));
+        
+        // send myself sync message
+        MessageResponse response = enablerLogic.sendSyncMessageToEnablerLogic(
+            "EnablerLogicInterpolator",
+            new MessageRequest("request"),
+            MessageResponse.class);
+        
+        log.info("Received sync response: {}", response.getResponse());
+    }
 
 	@Override
 	public void measurementReceived(EnablerLogicDataAppearedMessage dataAppeared) {
@@ -42,10 +74,10 @@ public class InterpolatorLogic implements ProcessingLogic {
 		request.setEnablerLogicName("interpolator");
 		request.setMinNoResources(1);
 		request.setCachingInterval("P0000-00-00T00:10:00"); // 10 mins.
-		// Although the sampling period is either 30 mins or 60 mins there is a transmit
-									// delay.
-									// If we miss one reading by just 1 second and we set the interval to 30 mins we
-									// are always 29 mins and 59 late.
+		    // Although the sampling period is either 30 mins or 60 mins there is a transmit
+			// delay.
+			// If we miss one reading by just 1 second and we set the interval to 30 mins we
+			// are always 29 mins and 59 late.
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
 		coreQueryRequest.setLocation_lat(48.208174);
 		coreQueryRequest.setLocation_long(16.373819);
