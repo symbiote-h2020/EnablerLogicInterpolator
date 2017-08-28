@@ -47,6 +47,9 @@ dependencies {
     compile('org.springframework.cloud:spring-cloud-starter-zipkin')
     
     compile('com.github.symbiote-h2020:EnablerLogic:develop-SNAPSHOT')
+    // from local maven repository
+    //compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+    
 
     // test only
     testCompile('org.springframework.boot:spring-boot-starter-test')
