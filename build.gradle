@@ -89,7 +89,7 @@ dependencies {
     // compile('com.github.symbiote-h2020:SymbIoTeLibraries:0.2.0')
     
     // from local maven repository
-    compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+    compile('eu.h2020.symbiote:EnablerLogic:develop-SNAPSHOT')
     
 
 
