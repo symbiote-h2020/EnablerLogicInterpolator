@@ -19,3 +19,4 @@ public class EnablerLogicInterpolator {
 		SpringApplication.run(EnablerLogicInterpolator.class, args);
     }
 }
+

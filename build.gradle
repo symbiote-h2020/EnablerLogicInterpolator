@@ -57,6 +57,21 @@ configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 }
 
+
+
+// adding sources for integrationTests
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+
 dependencies {
     
     /* SymbIoTeLibraries manual:
@@ -72,6 +87,10 @@ dependencies {
     */
     compile('com.github.symbiote-h2020:SymbIoTeLibraries:develop-SNAPSHOT') { changing = true }
     // compile('com.github.symbiote-h2020:SymbIoTeLibraries:0.2.0')
+    
+    // from local maven repository
+    compile('eu.h2020.symbiote:EnablerLogic:0.0.1-SNAPSHOT')
+    
 
 
 
@@ -89,6 +108,8 @@ dependencies {
     testCompile('org.springframework.boot:spring-boot-starter-test')
     testCompile('com.github.tomakehurst:wiremock')
     testCompile('org.springframework:spring-core')
+    testCompile('io.arivera.oss:embedded-rabbitmq:1.1.2')
+    testCompile('org.easymock:easymock:3.4')
 }
 
 // code quality below
