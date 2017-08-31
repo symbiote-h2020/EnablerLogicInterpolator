@@ -11,8 +11,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import eu.h2020.symbiote.EnablerLogic;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
-import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponseStatus;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
+import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTasksStatus;
 import eu.h2020.symbiote.smeur.Point;
 
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -31,7 +31,7 @@ public class EnablerLogicInterpolatorTests {
 		EnablerLogic elMock=mock(EnablerLogic.class);
 		
 		ResourceManagerAcquisitionStartResponse mockedResponse=new ResourceManagerAcquisitionStartResponse();
-		mockedResponse.setStatus(ResourceManagerAcquisitionStartResponseStatus.FAILED);
+		mockedResponse.setStatus(ResourceManagerTasksStatus.FAILED);
 		
 		ArgumentCaptor<ResourceManagerTaskInfoRequest> resourceRequestCapture = ArgumentCaptor.forClass(ResourceManagerTaskInfoRequest.class);
 		when(elMock.queryResourceManager(resourceRequestCapture.capture())).thenReturn(null);

@@ -174,7 +174,7 @@ public class queryMessagesTest {
 		EnablerLogic enablerLogic=new EnablerLogic(rabbitManager, enablerLogicProperties);
 		
 		InterpolatorLogic il=new InterpolatorLogic();
-		il.init(enablerLogic);
+		il.initialization(enablerLogic);
 		
 		rabbitManager.sendMessage(EXCHANGE_NAME, RECEIVING_ROUTING_KEY, "Some String");
 		Message receivedMessage=rabbitTemplate.receive(RECEIVING_QUEUE_NAME);

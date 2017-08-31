@@ -36,6 +36,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
+    mavenLocal();
     mavenCentral()
     maven { 
         url "https://jitpack.io" 
@@ -89,7 +90,8 @@ dependencies {
     // compile('com.github.symbiote-h2020:SymbIoTeLibraries:0.2.0')
     
     // from local maven repository
-    compile('eu.h2020.symbiote:EnablerLogic:develop-SNAPSHOT')
+    compile('com.github.symbiote-h2020:EnablerLogic:develop-SNAPSHOT')
+    compile('com.github.symbiote-h2020:SMEURLibraries:develop-SNAPSHOT')
     
 
 

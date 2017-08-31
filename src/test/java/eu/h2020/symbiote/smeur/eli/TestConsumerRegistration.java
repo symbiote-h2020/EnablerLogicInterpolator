@@ -39,7 +39,7 @@ public class TestConsumerRegistration {
 		pmMock=mock(PersistenceManagerInterface.class);
 		
 		il.setPersistenceManager(pmMock);
-		il.init(elMock);
+		il.initialization(elMock);
 	}
 
 	@After
@@ -98,14 +98,14 @@ public class TestConsumerRegistration {
 		ss.segmentData=new Point[] {new Point(1.0, 2.0), new Point(5.0, 6.0)}; // Center=3.0, 4.0
 		ric.streetSegments.put(ss.id, ss);
 
-		
+
+		// Expect...
 		ArgumentCaptor<ResourceManagerTaskInfoRequest> resourceRequestCapture = ArgumentCaptor.forClass(ResourceManagerTaskInfoRequest.class);
 		when(elMock.queryResourceManager(resourceRequestCapture.capture())).thenReturn(null);
 		
 		ArgumentCaptor<String> idCapture=ArgumentCaptor.forClass(String.class);
 		ArgumentCaptor<StreetSegmentList> sslCapture=ArgumentCaptor.forClass(StreetSegmentList.class);
 
-		// Expect...
 		doNothing().when(pmMock).persistStreetSegmentList(idCapture.capture(), sslCapture.capture());
 		
 		

@@ -47,11 +47,19 @@ public class InterpolatorLogic implements ProcessingLogic {
 	
 
 	@Override
-	public void init(EnablerLogic enablerLogic) {
+	public void initialization(EnablerLogic enablerLogic) {
 		this.enablerLogic = enablerLogic;
 
 		if (pm==null) // Might have been already injected
 			this.pm=new PersistenceManager();
+		
+
+//		public String registerConsumer(RegisterInterpolationConsumer ric) {
+
+
+//		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
+//				RegisterInterpolationConsumer.class, 
+//			    (m) -> registerConsumer(m));
 		
 		// Read persistent data from Mongo here
 		
@@ -170,7 +178,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return new Object[] {center, maxRadius};
 	}
 	
-	public void registerConsumer(RegisterInterpolationConsumer ric) {
+	public String registerConsumer(RegisterInterpolationConsumer ric) {
+		
 		String consumerID=ric.consumerID;
 		StreetSegmentList ssl=ric.streetSegments;
 		
@@ -187,6 +196,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		
 		pm.persistStreetSegmentList(consumerID, ssl);
 		
+		return "Just a dummy";
 	}
 
 }
