@@ -230,7 +230,13 @@ public class InterpolatorLogic implements ProcessingLogic {
 				return response;
 			}
 			
-			// TODO: Get the interpolated values from Mongo.
+			StreetSegmentList interpol=this.pm.retrieveInterpolatedValues(sslID);
+			if (interpol==null) {
+				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.TRY_LATER;
+			}
+			
+			response.theList=interpol;
+			
 		} catch(Throwable t) {
 			log.error("Exception during querying interpolated values:", t);
 			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.ERROR;
