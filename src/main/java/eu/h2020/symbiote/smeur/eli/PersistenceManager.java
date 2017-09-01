@@ -28,6 +28,9 @@ public class PersistenceManager implements PersistenceManagerInterface {
 
 	static String sslCollectionName="StreetSegmentLists";
 	MongoCollection<Document> collSSL;
+
+	static String interpolCollectionName="InterpolatedValues";
+	MongoCollection<Document> collInterpol;
 	
 	@Override
 	public void init() {
@@ -53,6 +56,10 @@ public class PersistenceManager implements PersistenceManagerInterface {
 		if (!allCollections.contains(sslCollectionName))
 			database.createCollection(sslCollectionName);
 		collSSL=database.getCollection(sslCollectionName);
+		
+		if (!allCollections.contains(interpolCollectionName))
+			database.createCollection(interpolCollectionName);
+		collInterpol=database.getCollection(interpolCollectionName);
 		
 		
 	}
@@ -119,6 +126,38 @@ public class PersistenceManager implements PersistenceManagerInterface {
 		}
 		
 		return ssld.theList;
+	}
+
+	@Override
+	public boolean ySSLIdExists(String sslID) {
+		Bson filter=Filters.eq(sslID);
+		
+		long n=collSSL.count(filter);
+		if (n>1)	// JUst a safeguard in case mongoDB has some ugly surprises for us.
+			throw new IllegalStateException("More than one document for id "+sslID+ ". This shouldn't happen");
+		
+		return n==1;
+	}
+
+	
+	// Deal with interpolated values.
+	/**
+	 * 
+	 */
+	@Override
+	public void persistInterpolatedValues(String sslID, StreetSegmentList ssl) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
+ 	 * @param sslID	The registered id of the street network
+	 * @return	The street segment list with interpolated values or null, if it does not exist.
+	 */
+	@Override
+	public StreetSegmentList retrieveInterpolatedValues(String sslID) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

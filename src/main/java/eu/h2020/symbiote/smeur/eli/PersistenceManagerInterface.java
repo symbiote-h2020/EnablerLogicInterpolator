@@ -11,6 +11,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 public interface PersistenceManagerInterface {
 	
 	
+	// Deal with street segments here (input data)
 	/**
 	 * Connect to the database here and other actions.
 	 */
@@ -26,4 +27,27 @@ public interface PersistenceManagerInterface {
 	 * @return
 	 */
 	StreetSegmentList retrieveStreetSegmentList(String sslID);
+	
+	/**
+	 * Find out whether a certain sslID exists.
+	 */
+	public boolean ySSLIdExists(String sslID);
+
+	
+	
+	// Deal with interpolated values here (output data)
+	
+	/**
+	 * Store a bunch of interpolated values.
+	 */
+	public void persistInterpolatedValues(String sslID, StreetSegmentList ssl);
+	
+	/**
+	 * Get them back again.
+	 * @param sslID
+	 * @return
+	 */
+	StreetSegmentList retrieveInterpolatedValues(String sslID);
+	
+	
 }

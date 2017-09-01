@@ -20,6 +20,8 @@ import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
+import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
 import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumer;
 import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumerResponse;
 
@@ -205,6 +207,37 @@ public class InterpolatorLogic implements ProcessingLogic {
 			result.explanation=t.getMessage();
 		}
 		return result;
+	}
+	
+	
+	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
+		QueryInterpolatedStreetSegmentListResponse response=new QueryInterpolatedStreetSegmentListResponse();
+		String sslID=null;
+		
+		try {
+			if (request==null)
+				throw new IllegalArgumentException("The request must not be null");
+			
+			sslID=request.sslID;
+			if (sslID==null || sslID.isEmpty()) {
+				throw new IllegalArgumentException("The sslID must not be null or empty");
+			}
+			
+			// Check if the SSLID is known.
+			if (!this.pm.ySSLIdExists(sslID)) {
+				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.UNKNOWN_SSLID;
+				response.explanation="The ID "+ sslID + " is not known to the interpolator. Has it been registered?";
+				return response;
+			}
+			
+			// TODO: Get the interpolated values from Mongo.
+		} catch(Throwable t) {
+			log.error("Exception during querying interpolated values:", t);
+			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.ERROR;
+			response.explanation=t.getMessage();
+		}
+		
+		return response;
 	}
 
 }
