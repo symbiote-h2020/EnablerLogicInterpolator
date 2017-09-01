@@ -231,11 +231,13 @@ public class InterpolatorLogic implements ProcessingLogic {
 			}
 			
 			StreetSegmentList interpol=this.pm.retrieveInterpolatedValues(sslID);
+			response.theList=interpol;
+			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.SUCCESS;
+
 			if (interpol==null) {
 				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.TRY_LATER;
 			}
 			
-			response.theList=interpol;
 			
 		} catch(Throwable t) {
 			log.error("Exception during querying interpolated values:", t);
