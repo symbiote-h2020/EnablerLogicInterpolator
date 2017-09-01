@@ -25,6 +25,7 @@ import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumer;
+import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumerResponse;
 
 public class TestConsumerRegistration {
 
@@ -49,38 +50,28 @@ public class TestConsumerRegistration {
 	@Test
 	public void testErrorBehavior() {
 		RegisterInterpolationConsumer ric=new RegisterInterpolationConsumer();
+		RegisterInterpolationConsumerResponse ricr;
 		
-		try {
-			il.registerConsumer(ric);	// consumerID is null --> fail
-			fail("Expected exception not thrown");
-		} catch(IllegalArgumentException e) {
-			// Pass
-		}
-
+		ricr=il.registerConsumer(ric);	// consumerID is null --> fail
+		
+		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertNotNull(ricr.explanation);
 		verifyZeroInteractions(elMock);
 		
 		ric.consumerID="SomeID";
 		
-		try {
-			il.registerConsumer(ric);	// StreetSegmentList is null --> fail
-			fail("Expected exception not thrown");
-		} catch(IllegalArgumentException e) {
-			// Pass
-		}
-
+		ricr=il.registerConsumer(ric);	// StreetSegmentList is null --> fail
+		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertNotNull(ricr.explanation);
 		verifyZeroInteractions(elMock);
 
 
 		StreetSegmentList ssl=new StreetSegmentList();
 		ric.streetSegments=ssl;
 		
-		try {
-			il.registerConsumer(ric);	// StreetSegmentList is empty --> fail
-			fail("Expected exception not thrown");
-		} catch(IllegalArgumentException e) {
-			// Pass
-		}
-		
+		ricr=il.registerConsumer(ric);	// StreetSegmentList is empty --> fail
+		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertNotNull(ricr.explanation);		
 		verifyZeroInteractions(elMock);
 				
 	}
@@ -90,6 +81,9 @@ public class TestConsumerRegistration {
 	public void testRegistrationProcess() {
 
 		RegisterInterpolationConsumer ric=new RegisterInterpolationConsumer();
+		RegisterInterpolationConsumerResponse ricr;
+		
+		
 		ric.consumerID="SomeID";
 		ric.streetSegments=new StreetSegmentList();
 
@@ -110,11 +104,16 @@ public class TestConsumerRegistration {
 		
 		
 		// Here's the testee call!!!
-		il.registerConsumer(ric);
+		ricr=il.registerConsumer(ric);
 		
 		
 		// Check results
-		// 1. A request for resources should have been generated
+		// 1. A response should have been returned with status ok
+		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.SUCCESS, ricr.status);
+		
+		
+		
+		// 2. A request for resources should have been generated
 		ResourceManagerTaskInfoRequest request=resourceRequestCapture.getValue();
 		assertNotNull(request);
 		
@@ -124,7 +123,7 @@ public class TestConsumerRegistration {
 		assertEquals(request.getCoreQueryRequest().getMax_distance(), (Integer)314291);	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
 		
 		
-		// 2. The StreetSegmentList should be stored through the Persistence Manager.
+		// 3. The StreetSegmentList should be stored through the Persistence Manager.
 		verify(pmMock, times(1)).persistStreetSegmentList(anyString(), anyObject());	// Needs to be two times as Mockito seems to also count 
 		
 		List<String> capturedIDs=idCapture.getAllValues();

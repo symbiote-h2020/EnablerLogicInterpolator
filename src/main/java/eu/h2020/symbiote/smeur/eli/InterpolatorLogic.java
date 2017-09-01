@@ -21,6 +21,7 @@ import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumer;
+import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumerResponse;
 
 @Component
 public class InterpolatorLogic implements ProcessingLogic {
@@ -178,25 +179,32 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return new Object[] {center, maxRadius};
 	}
 	
-	public String registerConsumer(RegisterInterpolationConsumer ric) {
+	public RegisterInterpolationConsumerResponse registerConsumer(RegisterInterpolationConsumer ric) {
 		
-		String consumerID=ric.consumerID;
-		StreetSegmentList ssl=ric.streetSegments;
-		
-		if (consumerID==null || consumerID.isEmpty())
-			throw new IllegalArgumentException("ConsumerID may not be null or empty");
-		
-		if (ssl==null || ssl.isEmpty())
-			throw new IllegalArgumentException("Street segment list may not be null and must hold at least one segment");
-		
-		Object[] result=calculateCenterAndRadius(ssl);
-		
-		
-		queryFixedStations(enablerLogic, (Point)result[0], (Double)result[1]);
-		
-		pm.persistStreetSegmentList(consumerID, ssl);
-		
-		return "Just a dummy";
+		RegisterInterpolationConsumerResponse result=new RegisterInterpolationConsumerResponse();
+		result.status=RegisterInterpolationConsumerResponse.StatusCode.SUCCESS;
+		try {
+			String consumerID=ric.consumerID;
+			StreetSegmentList ssl=ric.streetSegments;
+			
+			if (consumerID==null || consumerID.isEmpty())
+				throw new IllegalArgumentException("ConsumerID may not be null or empty");
+			
+			if (ssl==null || ssl.isEmpty())
+				throw new IllegalArgumentException("Street segment list may not be null and must hold at least one segment");
+			
+			Object[] c_and_r=calculateCenterAndRadius(ssl);
+			
+			
+			queryFixedStations(enablerLogic, (Point)c_and_r[0], (Double)c_and_r[1]);
+			
+			pm.persistStreetSegmentList(consumerID, ssl);
+		} catch(Throwable t) {
+			log.error("Problems when registering a consumer:", t);
+			result.status=RegisterInterpolationConsumerResponse.StatusCode.ERROR;
+			result.explanation=t.getMessage();
+		}
+		return result;
 	}
 
 }

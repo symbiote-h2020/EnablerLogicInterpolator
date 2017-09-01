@@ -20,7 +20,7 @@ apply plugin: 'org.springframework.boot'
 
 // code quality
 apply plugin: 'jacoco'
-apply plugin: 'org.owasp.dependencycheck'
+//apply plugin: 'org.owasp.dependencycheck'
 
 // IDEs
 apply plugin: 'eclipse'
@@ -36,7 +36,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-    mavenLocal();
+//    mavenLocal();
     mavenCentral()
     maven { 
         url "https://jitpack.io" 
@@ -133,10 +133,11 @@ jacocoTestReport {
 }
 
 // owasp config
-dependencyCheck {
-    outputDirectory = "build/reports/security"
-}
+//dependencyCheck {
+//    outputDirectory = "build/reports/security"
+//}
 
 
 // including code quality extensions into the build
-check.dependsOn(jacocoTestReport, 'dependencyCheck')
+check.dependsOn(jacocoTestReport)
+//check.dependsOn(jacocoTestReport, 'dependencyCheck')
