@@ -1,28 +1,13 @@
 package eu.h2020.symbiote.smeur.eli;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
-
-import java.util.List;
+import static org.mockito.Mockito.*;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
-import eu.h2020.symbiote.EnablerLogic;
-import eu.h2020.symbiote.core.ci.SparqlQueryRequest;
-import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
-import eu.h2020.symbiote.smeur.Point;
-import eu.h2020.symbiote.smeur.StreetSegment;
+import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;

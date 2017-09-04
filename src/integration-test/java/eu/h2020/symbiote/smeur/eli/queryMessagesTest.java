@@ -25,12 +25,13 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.rabbitmq.client.Channel;
 
-import eu.h2020.symbiote.EnablerLogic;
-import eu.h2020.symbiote.messaging.RabbitManager;
-import eu.h2020.symbiote.messaging.properties.EnablerLogicProperties;
-import eu.h2020.symbiote.messaging.properties.ExchangeProperties;
-import eu.h2020.symbiote.messaging.properties.RabbitConnectionProperties;
-import eu.h2020.symbiote.messaging.properties.RoutingKeysProperties;
+import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.enablerlogic.messaging.RabbitManager;
+import eu.h2020.symbiote.enablerlogic.messaging.properties.EnablerLogicProperties;
+import eu.h2020.symbiote.enablerlogic.messaging.properties.ExchangeProperties;
+import eu.h2020.symbiote.enablerlogic.messaging.properties.PluginProperties;
+import eu.h2020.symbiote.enablerlogic.messaging.properties.RabbitConnectionProperties;
+import eu.h2020.symbiote.enablerlogic.messaging.properties.RoutingKeysProperties;
 import eu.h2020.symbiote.smeur.eli.InterpolatorLogic;
 import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMq;
 import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMqConfig;
@@ -59,15 +60,22 @@ public class queryMessagesTest {
 		public EnablerLogicProperties enablerLogicProperties(
 										RabbitConnectionProperties rabbitConnection, 
 										ExchangeProperties exchangeProperties,
-										RoutingKeysProperties routingKeyProperties) 
+										RoutingKeysProperties routingKeyProperties,
+										PluginProperties pluginProperties) 
 		{
-			return new EnablerLogicProperties(rabbitConnection, exchangeProperties, routingKeyProperties);
+			return new EnablerLogicProperties(rabbitConnection, exchangeProperties, routingKeyProperties, pluginProperties);
 		}
 
 		@Bean
 		public RabbitConnectionProperties rabbitConnectionProperties() 
 		{
 			return new RabbitConnectionProperties();
+		}
+
+		@Bean
+		public PluginProperties pluginProperties() 
+		{
+			return new PluginProperties();
 		}
 	}
 	

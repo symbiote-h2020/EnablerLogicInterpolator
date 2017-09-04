@@ -4,18 +4,14 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
-import eu.h2020.symbiote.EnablerLogic;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTasksStatus;
+import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.Point;
 
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 
 //@RunWith(SpringRunner.class)
 //@SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT, 
@@ -28,7 +24,7 @@ public class EnablerLogicInterpolatorTests {
 	public void testQueryForSensors() {
 		InterpolatorLogic il=new InterpolatorLogic();
 		
-		EnablerLogic elMock=mock(EnablerLogic.class);
+		EnablerLogic elMock=(EnablerLogic) mock(EnablerLogic.class);
 		
 		ResourceManagerAcquisitionStartResponse mockedResponse=new ResourceManagerAcquisitionStartResponse();
 		mockedResponse.setStatus(ResourceManagerTasksStatus.FAILED);

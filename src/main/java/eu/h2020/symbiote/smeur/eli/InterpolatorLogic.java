@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import eu.h2020.symbiote.EnablerLogic;
-import eu.h2020.symbiote.ProcessingLogic;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
+import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
