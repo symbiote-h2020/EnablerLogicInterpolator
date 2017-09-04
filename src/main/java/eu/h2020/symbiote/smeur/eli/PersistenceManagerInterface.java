@@ -14,6 +14,7 @@ public interface PersistenceManagerInterface {
 	// Deal with street segments here (input data)
 	/**
 	 * Connect to the database here and other actions.
+	 * 
 	 */
 	public void init();
 	

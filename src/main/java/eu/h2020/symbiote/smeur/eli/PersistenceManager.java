@@ -26,24 +26,24 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 
 public class PersistenceManager implements PersistenceManagerInterface {
 
-	static String sslCollectionName="StreetSegmentLists";
+	String databaseName="symbiote_eli_database";	// Note: Not final on purpose
+	
+	static final String sslCollectionName="StreetSegmentLists";
 	MongoCollection<Document> collSSL;
 
-	static String interpolCollectionName="InterpolatedValues";
+	static final String interpolCollectionName="InterpolatedValues";
 	MongoCollection<Document> collInterpol;
 	
 	@Override
 	public void init() {
-		// Creating a Mongo client
-		MongoClient mongo = new MongoClient("localhost", 27017);
+		
+		MongoDatabase database;
 
-		// Creating Credentials
-//		MongoCredential credential;
-//		credential = MongoCredential.createCredential("sampleUser", "myDb", "password".toCharArray());
-//		System.out.println("Connected to the database successfully");
-
+		MongoClient mongo=connect();
+		
+		
 		// Accessing the database
-		MongoDatabase database = mongo.getDatabase("symbiote_eli_database");
+		database = mongo.getDatabase(databaseName);
 //		System.out.println("Credentials ::" + credential);
 
 		// Get all existing collection names and move them into a more convenient set.
@@ -141,12 +141,43 @@ public class PersistenceManager implements PersistenceManagerInterface {
 
 	
 	// Deal with interpolated values.
+	private static class InterpolatedValuesDocument {
+		public String _id;
+		public StreetSegmentList theList;
+
+		public InterpolatedValuesDocument() 
+		{			
+		}
+		
+		public InterpolatedValuesDocument(String _id, StreetSegmentList ssl) {
+			this._id=_id;
+			theList=ssl;
+		}
+		
+	}
+	
+	
 	/**
 	 * 
 	 */
 	@Override
 	public void persistInterpolatedValues(String sslID, StreetSegmentList ssl) {
-		// TODO Auto-generated method stub
+		InterpolatedValuesDocument ssld=new InterpolatedValuesDocument(sslID, ssl);
+		
+        ObjectMapper mapper = new ObjectMapper();
+        String json=null;
+        try {
+			json = mapper.writeValueAsString(ssld);
+		} catch (JsonProcessingException e) {
+			// Not really handled as any occurrence of this exception is due to an error during coding.
+			e.printStackTrace();
+		}
+
+		
+		Document document=Document.parse(json);
+		Bson filter=Filters.eq(sslID);
+		this.collInterpol.replaceOne(filter, document, (new UpdateOptions()).upsert(true));
+		//.insertOne(document);
 		
 	}
 
@@ -156,8 +187,60 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	 */
 	@Override
 	public StreetSegmentList retrieveInterpolatedValues(String sslID) {
-		// TODO Auto-generated method stub
-		return null;
+		Bson filter=Filters.eq(sslID);
+		FindIterable<Document> documentIter=collInterpol.find(filter);
+		
+		Document document=documentIter.first();
+		if (document==null)	// The the short way out when document does not exist.
+			return null;
+		
+		String json=document.toJson();
+
+        ObjectMapper mapper = new ObjectMapper();
+        InterpolatedValuesDocument interpold=null;
+        try {
+			interpold=mapper.readValue(json, InterpolatedValuesDocument.class);
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return interpold.theList;
 	}
 
+	
+	
+	/// Utils
+	public void wipeoutDB() {
+		MongoClient mongo=connect();
+		
+		MongoDatabase database = mongo.getDatabase(databaseName);
+		database.drop();    // CU later :-)
+	}
+	
+	public void useDebugDatabase() {
+		databaseName="symbiote_eli_debugdb";
+	}
+	
+	/// private stuff here
+	private MongoClient connect() {
+		// Creating a Mongo client
+		MongoClient mongo = new MongoClient("localhost", 27017);
+
+		// Creating Credentials
+//		MongoCredential credential;
+//		credential = MongoCredential.createCredential("sampleUser", "myDb", "password".toCharArray());
+//		System.out.println("Connected to the database successfully");
+
+		return mongo;
+	}
+	
+
+	
 }
