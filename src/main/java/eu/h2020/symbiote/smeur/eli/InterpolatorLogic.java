@@ -1,7 +1,10 @@
 package eu.h2020.symbiote.smeur.eli;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.slf4j.Logger;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
@@ -32,6 +36,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 	private EnablerLogic enablerLogic;
 
 	private PersistenceManagerInterface pm=null;
+
+	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
 	
 
 	// Getter/Setter
@@ -45,6 +51,14 @@ public class InterpolatorLogic implements ProcessingLogic {
 		this.pm=pm;
 	}
 
+	/**
+	 * Disable cutoff.
+	 * Intended usage: unit testing.
+	 * @param yUseCutoff
+	 */
+	public void useCutoff(boolean yUseCutOff) {
+		this.yUseCutoff=yUseCutOff;
+	}
 	
 	// public interface routines
 	
@@ -73,16 +87,100 @@ public class InterpolatorLogic implements ProcessingLogic {
 
 	@Override
 	public void measurementReceived(EnablerLogicDataAppearedMessage dataAppeared) {
-		System.out.println("received new Observations:\n"+dataAppeared);
+		
+		if (dataAppeared==null) {
+			log.error("measurementReceived called with null as an argument. Cowardly refusing to work further with that.");
+			return;	// Who does send such a mess? A pity we can't give immediate feedback here.
+		}
+		
+		String taskID=dataAppeared.getTaskId();
+		int colonIndex=taskID.lastIndexOf(":");
+		
+		if (colonIndex==-1) {
+			log.error("Why do you send me ID's I never asked for ("+taskID+")?");
+			return;	// Can't be one of my ID's, can it?
+		}
+		
+		String sslID=taskID.substring(0, colonIndex);
+
+		boolean knownID=pm.ySSLIdExists(sslID);
+		if (!knownID)
+			return;
+		
+		// Everything checked. Let's start the real work.
+		List<Observation> theNewObs=dataAppeared.getObservations();
+		List<Observation> theOldObs=pm.retrieveObservations(sslID);
+		
+		Instant now=Instant.now();
+		Instant cutOffTime=now.minusSeconds(30*60);
+		if (!this.yUseCutoff)
+			cutOffTime=null;
+		
+		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime);	// Cutoff 30 mins
+		
+		
+		this.pm.persistObservations(sslID, mergedObservations);
+				
 	}
 
-	
+
 	// Internal logic and helpers
 	
+	protected List<Observation> mergeObservations( // Should be private but then it's not available for grey box unit testing
+			List<Observation> theNewObs, 
+			List<Observation> theOldObs, 
+			Instant cutOffTime) {
+		
+		List<Observation> result;
+		
+		if (theOldObs==null && theNewObs==null)
+			return null;
+		
+		if (theOldObs==null)
+			result=new ArrayList<Observation>();
+		else
+			result=new ArrayList<Observation>(theOldObs);
+		
+		if (theNewObs!=null) {
+			// Merge the new list in. 
+			
+			for (Observation obs : theNewObs) {
+				if (!result.contains(obs)) {
+					result.add(obs);
+				}
+			}
+		}
+
+		if (cutOffTime!=null) {
+			Iterator<Observation> it=result.iterator();
+			while (it.hasNext()) {
+				Observation obs=it.next();
+				String relevantTime=obs.getResultTime();
+				if (relevantTime==null)
+					relevantTime=obs.getSamplingTime();
+				
+				if (relevantTime==null) {	// Neither time set --> you are FIRED!!
+					it.remove();
+					continue;
+				}
+					
+				Instant relevantInstant=Instant.parse(relevantTime);
+				
+				if (relevantInstant.isBefore(cutOffTime)) {
+					it.remove();
+					continue;
+				}
+			}
+		}
+		
+		return result;
+	}
+
+
 	
-	protected void queryFixedStations(EnablerLogic el, Point center, Double radius) {
+	protected void queryFixedStations(EnablerLogic el, String consumerID, Point center, Double radius) {
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
-		request.setTaskId("Vienna-Fixed");
+		request.setTaskId(consumerID+":fixed");
 		request.setEnablerLogicName("interpolator");
 		request.setMinNoResources(1);
 		request.setCachingInterval("P0000-00-00T00:10:00"); // 10 mins.
@@ -105,18 +203,18 @@ public class InterpolatorLogic implements ProcessingLogic {
 		}
 	}
 
-	protected void queryMobileStations(EnablerLogic el) {
+	protected void queryMobileStations(EnablerLogic el, String consumerID, Point c, Double r) {
 		
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
-		request.setTaskId("Vienna-Mobile");
+		request.setTaskId(consumerID+":mobile");
 		request.setEnablerLogicName("interpolator");
 		request.setMinNoResources(1);
 		request.setCachingInterval("P0000-00-00T00:01:00"); // 1 min
 
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
-		coreQueryRequest.setLocation_lat(48.208174);
-		coreQueryRequest.setLocation_long(16.373819);
-		coreQueryRequest.setMax_distance(10_000); // radius 10km
+		coreQueryRequest.setLocation_lat(c.lat);
+		coreQueryRequest.setLocation_long(c.lon);
+		coreQueryRequest.setMax_distance((int)(r*1000));
 		coreQueryRequest.setObserved_property(Arrays.asList("NOx"));
 		request.setCoreQueryRequest(coreQueryRequest);
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
@@ -198,7 +296,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
 			
 			
-			queryFixedStations(enablerLogic, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryFixedStations(enablerLogic, consumerID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryMobileStations(enablerLogic, consumerID, (Point)c_and_r[0], (Double)c_and_r[1]);
 			
 			pm.persistStreetSegmentList(consumerID, ssl);
 		} catch(Throwable t) {

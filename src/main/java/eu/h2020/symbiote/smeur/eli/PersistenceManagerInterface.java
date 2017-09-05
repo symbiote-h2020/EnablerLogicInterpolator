@@ -1,5 +1,9 @@
 package eu.h2020.symbiote.smeur.eli;
 
+
+import java.util.List;
+
+import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
 /**
@@ -50,5 +54,19 @@ public interface PersistenceManagerInterface {
 	 */
 	StreetSegmentList retrieveInterpolatedValues(String sslID);
 	
+	
+	// Deal with measurements (observations) here
+	/**
+	 * Store measurements.
+	 * @param sslID
+	 */
+	public void persistObservations(String sslID, List<Observation> observations);
+	
+	/**
+	 * retrieve a set of observations.
+	 * @param sslID
+	 * @return
+	 */
+	public List<Observation> retrieveObservations(String sslID);
 	
 }

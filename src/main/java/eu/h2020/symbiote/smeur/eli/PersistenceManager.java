@@ -240,6 +240,18 @@ public class PersistenceManager implements PersistenceManagerInterface {
 
 		return mongo;
 	}
+
+	@Override
+	public void persistObservations(String sslID, List<Observation> observations) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public List<Observation> retrieveObservations(String sslID) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 	
 
 	

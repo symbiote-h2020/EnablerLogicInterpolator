@@ -33,13 +33,14 @@ public class EnablerLogicInterpolatorTests {
 		when(elMock.queryResourceManager(resourceRequestCapture.capture())).thenReturn(null);
 		
 		// Excercise the call here
-		il.queryFixedStations(elMock, new Point(1.0, 2.0), 3.0);
+		il.queryFixedStations(elMock, "myConsumerID", new Point(1.0, 2.0), 3.0);
 		
 		// Check results
 		ResourceManagerTaskInfoRequest request=resourceRequestCapture.getValue();
 		assertNotNull(request);
 		
-		assertEquals(request.getCachingInterval(), "P0000-00-00T00:10:00");
+		assertEquals("myConsumerID:fixed", request.getTaskId());
+		assertEquals("P0000-00-00T00:10:00", request.getCachingInterval());
 		
 	}
 
