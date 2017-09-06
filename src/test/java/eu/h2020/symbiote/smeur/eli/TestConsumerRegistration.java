@@ -22,8 +22,8 @@ import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
-import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumer;
-import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumerResponse;
+import eu.h2020.symbiote.smeur.messages.RegisterRegion;
+import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
 public class TestConsumerRegistration {
 
@@ -47,19 +47,19 @@ public class TestConsumerRegistration {
 
 	@Test
 	public void testErrorBehavior() {
-		RegisterInterpolationConsumer ric=new RegisterInterpolationConsumer();
-		RegisterInterpolationConsumerResponse ricr;
+		RegisterRegion ric=new RegisterRegion();
+		RegisterRegionResponse ricr;
 		
 		ricr=il.registerConsumer(ric);	// consumerID is null --> fail
 		
-		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);
 		verifyZeroInteractions(elMock);
 		
-		ric.consumerID="SomeID";
+		ric.regionID="SomeID";
 		
 		ricr=il.registerConsumer(ric);	// StreetSegmentList is null --> fail
-		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);
 		verifyZeroInteractions(elMock);
 
@@ -68,7 +68,7 @@ public class TestConsumerRegistration {
 		ric.streetSegments=ssl;
 		
 		ricr=il.registerConsumer(ric);	// StreetSegmentList is empty --> fail
-		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.ERROR, ricr.status);
+		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);		
 		verifyZeroInteractions(elMock);
 				
@@ -78,11 +78,11 @@ public class TestConsumerRegistration {
 	@Test
 	public void testRegistrationProcess() {
 
-		RegisterInterpolationConsumer ric=new RegisterInterpolationConsumer();
-		RegisterInterpolationConsumerResponse ricr;
+		RegisterRegion ric=new RegisterRegion();
+		RegisterRegionResponse ricr;
 		
 		
-		ric.consumerID="SomeID";
+		ric.regionID="SomeID";
 		ric.streetSegments=new StreetSegmentList();
 
 		StreetSegment ss=new StreetSegment();
@@ -107,7 +107,7 @@ public class TestConsumerRegistration {
 		
 		// Check results
 		// 1. A response should have been returned with status ok
-		assertEquals(RegisterInterpolationConsumerResponse.StatusCode.SUCCESS, ricr.status);
+		assertEquals(RegisterRegionResponse.StatusCode.SUCCESS, ricr.status);
 		
 		
 		assertEquals(2, resourceRequestCapture.getAllValues().size());	// Expect two calls to get resources.

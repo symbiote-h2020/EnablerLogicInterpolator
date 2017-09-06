@@ -26,8 +26,8 @@ import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
-import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumer;
-import eu.h2020.symbiote.smeur.messages.RegisterInterpolationConsumerResponse;
+import eu.h2020.symbiote.smeur.messages.RegisterRegion;
+import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
 @Component
 public class InterpolatorLogic implements ProcessingLogic {
@@ -279,15 +279,15 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return new Object[] {center, maxRadius};
 	}
 	
-	public RegisterInterpolationConsumerResponse registerConsumer(RegisterInterpolationConsumer ric) {
+	public RegisterRegionResponse registerConsumer(RegisterRegion ric) {
 		
-		RegisterInterpolationConsumerResponse result=new RegisterInterpolationConsumerResponse();
-		result.status=RegisterInterpolationConsumerResponse.StatusCode.SUCCESS;
+		RegisterRegionResponse result=new RegisterRegionResponse();
+		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
 		try {
-			String consumerID=ric.consumerID;
+			String regionID=ric.regionID;
 			StreetSegmentList ssl=ric.streetSegments;
 			
-			if (consumerID==null || consumerID.isEmpty())
+			if (regionID==null || regionID.isEmpty())
 				throw new IllegalArgumentException("ConsumerID may not be null or empty");
 			
 			if (ssl==null || ssl.isEmpty())
@@ -296,13 +296,13 @@ public class InterpolatorLogic implements ProcessingLogic {
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
 			
 			
-			queryFixedStations(enablerLogic, consumerID, (Point)c_and_r[0], (Double)c_and_r[1]);
-			queryMobileStations(enablerLogic, consumerID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryFixedStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryMobileStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
 			
-			pm.persistStreetSegmentList(consumerID, ssl);
+			pm.persistStreetSegmentList(regionID, ssl);
 		} catch(Throwable t) {
 			log.error("Problems when registering a consumer:", t);
-			result.status=RegisterInterpolationConsumerResponse.StatusCode.ERROR;
+			result.status=RegisterRegionResponse.StatusCode.ERROR;
 			result.explanation=t.getMessage();
 		}
 		return result;

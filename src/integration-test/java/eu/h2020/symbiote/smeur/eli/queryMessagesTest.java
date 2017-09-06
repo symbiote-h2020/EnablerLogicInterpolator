@@ -9,6 +9,7 @@ import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.core.Message;
@@ -39,6 +40,7 @@ import io.arivera.oss.embedded.rabbitmq.bin.RabbitMqPlugins;
 
 @RunWith(SpringRunner.class)
 @Import({RabbitManager.class})
+@Ignore
 public class queryMessagesTest {
 
 	// This class provides configuration for the test spring environment. Note the @Configuration annotation
