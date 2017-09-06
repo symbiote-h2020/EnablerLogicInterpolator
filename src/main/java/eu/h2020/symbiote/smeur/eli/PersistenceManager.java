@@ -1,6 +1,9 @@
 package eu.h2020.symbiote.smeur.eli;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +37,9 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	static final String interpolCollectionName="InterpolatedValues";
 	MongoCollection<Document> collInterpol;
 	
+	static final String observationCollectionName="MeasurementValues";
+	MongoCollection<Document> collObservations;
+	
 	@Override
 	public void init() {
 		
@@ -61,6 +67,10 @@ public class PersistenceManager implements PersistenceManagerInterface {
 			database.createCollection(interpolCollectionName);
 		collInterpol=database.getCollection(interpolCollectionName);
 		
+		if (!allCollections.contains(observationCollectionName))
+			database.createCollection(observationCollectionName);
+		collObservations=database.getCollection(observationCollectionName);
+		
 		
 	}
 
@@ -83,22 +93,8 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	@Override
 	public void persistStreetSegmentList(String sslID, StreetSegmentList ssl) {
 
-		StreetSegmentListDocument ssld=new StreetSegmentListDocument(sslID, ssl);
-		
-        ObjectMapper mapper = new ObjectMapper();
-        String json=null;
-        try {
-			json = mapper.writeValueAsString(ssld);
-		} catch (JsonProcessingException e) {
-			// Not really handled as any occurrence of this exception is due to an error during coding.
-			e.printStackTrace();
-		}
+		persistGeneric(sslID, ssl, this.collSSL, StreetSegmentListDocument.class);
 
-		
-		Document document=Document.parse(json);
-		Bson filter=Filters.eq(sslID);
-		collSSL.replaceOne(filter, document, (new UpdateOptions()).upsert(true));
-		//.insertOne(document);
 	}
 
 	@Override
@@ -162,23 +158,9 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	 */
 	@Override
 	public void persistInterpolatedValues(String sslID, StreetSegmentList ssl) {
-		InterpolatedValuesDocument ssld=new InterpolatedValuesDocument(sslID, ssl);
-		
-        ObjectMapper mapper = new ObjectMapper();
-        String json=null;
-        try {
-			json = mapper.writeValueAsString(ssld);
-		} catch (JsonProcessingException e) {
-			// Not really handled as any occurrence of this exception is due to an error during coding.
-			e.printStackTrace();
-		}
 
-		
-		Document document=Document.parse(json);
-		Bson filter=Filters.eq(sslID);
-		this.collInterpol.replaceOne(filter, document, (new UpdateOptions()).upsert(true));
-		//.insertOne(document);
-		
+		persistGeneric(sslID, ssl, this.collInterpol, InterpolatedValuesDocument.class);
+
 	}
 
 	/**
@@ -215,6 +197,60 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	}
 
 	
+	private static class ObservationsDocument {
+		public String _id;
+		public List<Observation> theList;
+
+		public ObservationsDocument() 
+		{			
+		}
+		
+		public ObservationsDocument(String _id, List<Observation> obsList) {
+			this._id=_id;
+			theList=obsList;
+		}
+		
+	}
+	
+	
+	@Override
+	public void persistObservations(String sslID, List<Observation> observations) {
+		
+		persistGeneric(sslID, observations, this.collObservations, ObservationsDocument.class);
+		
+	}
+
+	@Override
+	public List<Observation> retrieveObservations(String sslID) {
+		Bson filter=Filters.eq(sslID);
+		FindIterable<Document> documentIter=collObservations.find(filter);
+		
+		Document document=documentIter.first();
+		if (document==null)	// The the short way out when document does not exist.
+			return null;
+		
+		String json=document.toJson();
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObservationsDocument obsd=null;
+        try {
+        	obsd=mapper.readValue(json, ObservationsDocument.class);
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return obsd.theList;
+	}
+	
+	
+	
 	
 	/// Utils
 	public void wipeoutDB() {
@@ -241,18 +277,77 @@ public class PersistenceManager implements PersistenceManagerInterface {
 		return mongo;
 	}
 
-	@Override
-	public void persistObservations(String sslID, List<Observation> observations) {
-		// TODO Auto-generated method stub
-		
+
+	private Constructor<?> findCompatibleConstructorHelper(Class<?> claus, int i, Class<?> newClass, Class<?> ... args) {
+		if (newClass==null)
+			return null;
+		Class<?>[] superArgs=(Class<?>[]) Arrays.copyOf(args, args.length);
+		superArgs[i]=newClass;
+		Constructor<?> constructor=findCompatibleConstructor(claus, superArgs);
+		return constructor;
 	}
 
-	@Override
-	public List<Observation> retrieveObservations(String sslID) {
-		// TODO Auto-generated method stub
+	private Constructor<?> findCompatibleConstructor(Class<?> claus, Class<?> ... args) {
+		Constructor<?> constructor=null;
+		try {
+			constructor=claus.getConstructor(args);
+			return constructor;
+		} catch (NoSuchMethodException | SecurityException e) {
+		}
+		
+		for (int i=0; i<args.length; i++) {
+			Class<?> superClass=args[i].getSuperclass();
+			constructor=findCompatibleConstructorHelper(claus, i, superClass, args);
+			if (constructor!=null)
+				return constructor;
+			
+			for (Class<?> intf : args[i].getInterfaces()) {
+				constructor=findCompatibleConstructorHelper(claus, i, intf, args);
+				if (constructor!=null)
+					return constructor;				
+			}
+		}
 		return null;
 	}
 	
+	private void persistGeneric(String id, Object content, MongoCollection<Document> coll, Class<?> documentClass) {
+		try {
+			Constructor<?> constructor=findCompatibleConstructor(documentClass, String.class, content.getClass());
+			if (constructor==null) {
+				throw new IllegalStateException("Tottaly confused");
+			}
+			Object doc=constructor.newInstance(id, content);
 
-	
+			ObjectMapper mapper = new ObjectMapper();
+	        String json=null;
+
+			json = mapper.writeValueAsString(doc);
+
+			Document document=Document.parse(json);
+
+			Bson filter=Filters.eq(id);
+			coll.replaceOne(filter, document, (new UpdateOptions()).upsert(true));
+
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+				
+	}
+		
 }

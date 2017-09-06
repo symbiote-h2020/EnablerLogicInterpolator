@@ -2,12 +2,15 @@ package eu.h2020.symbiote.smeur.eli;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
@@ -109,5 +112,31 @@ public class TestPersistenceFunctions {
 		assertEquals(ssl, sslReadBack);
 
 	}
+
 	
+	
+	@Test
+	public void testObservationPersistance() {
+		
+		String sBaseTimeForTest="2016-11-11T01:00:00Z";
+
+		List<Observation> observations=new ArrayList<Observation>();
+		
+		Observation obs=new Observation("rID1", null, sBaseTimeForTest, sBaseTimeForTest, null);
+		observations.add(obs);
+
+		Observation obs1=new Observation("rID1", null, sBaseTimeForTest, sBaseTimeForTest, null);
+		observations.add(obs1);
+
+		pm.persistObservations("obsID", observations);
+		List<Observation> obsReadBack=pm.retrieveObservations("funny id");
+		
+		assertNull(obsReadBack);
+
+		obsReadBack=pm.retrieveObservations("obsID");
+		
+		assertEquals(observations, obsReadBack);
+
+	}
+
 }
