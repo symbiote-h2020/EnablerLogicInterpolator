@@ -36,6 +36,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 	private EnablerLogic enablerLogic;
 
 	private PersistenceManagerInterface pm=null;
+	private InterpolationManagerInterface im=null;
 
 	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
 	
@@ -69,7 +70,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 
 		if (pm==null) // Might have been already injected
 			this.pm=new PersistenceManager();
-		
+
+		this.im=new InterpolationManagerDummyInterpolation();
 
 //		public String registerConsumer(RegisterInterpolationConsumer ric) {
 
@@ -120,6 +122,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		
 		
 		this.pm.persistObservations(sslID, mergedObservations);
+		
 				
 	}
 
@@ -279,7 +282,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return new Object[] {center, maxRadius};
 	}
 	
-	public RegisterRegionResponse registerConsumer(RegisterRegion ric) {
+	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
 		
 		RegisterRegionResponse result=new RegisterRegionResponse();
 		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
@@ -300,11 +303,17 @@ public class InterpolatorLogic implements ProcessingLogic {
 			queryMobileStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
 			
 			pm.persistStreetSegmentList(regionID, ssl);
+
+			// TODO: This behavior is just for testing.
+			StreetSegmentList interpol=im.doInterpolation(ssl, null);
+			pm.persistInterpolatedValues(regionID, interpol);
+
 		} catch(Throwable t) {
 			log.error("Problems when registering a consumer:", t);
 			result.status=RegisterRegionResponse.StatusCode.ERROR;
 			result.explanation=t.getMessage();
 		}
+		
 		return result;
 	}
 	

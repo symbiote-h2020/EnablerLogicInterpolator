@@ -50,7 +50,7 @@ public class TestConsumerRegistration {
 		RegisterRegion ric=new RegisterRegion();
 		RegisterRegionResponse ricr;
 		
-		ricr=il.registerConsumer(ric);	// consumerID is null --> fail
+		ricr=il.registerRegion(ric);	// consumerID is null --> fail
 		
 		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);
@@ -58,7 +58,7 @@ public class TestConsumerRegistration {
 		
 		ric.regionID="SomeID";
 		
-		ricr=il.registerConsumer(ric);	// StreetSegmentList is null --> fail
+		ricr=il.registerRegion(ric);	// StreetSegmentList is null --> fail
 		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);
 		verifyZeroInteractions(elMock);
@@ -67,7 +67,7 @@ public class TestConsumerRegistration {
 		StreetSegmentList ssl=new StreetSegmentList();
 		ric.streetSegments=ssl;
 		
-		ricr=il.registerConsumer(ric);	// StreetSegmentList is empty --> fail
+		ricr=il.registerRegion(ric);	// StreetSegmentList is empty --> fail
 		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);		
 		verifyZeroInteractions(elMock);
@@ -102,7 +102,7 @@ public class TestConsumerRegistration {
 		
 		
 		// Here's the testee call!!!
-		ricr=il.registerConsumer(ric);
+		ricr=il.registerRegion(ric);
 		
 		
 		// Check results
