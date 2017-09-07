@@ -3,8 +3,10 @@ package eu.h2020.symbiote.smeur.eli;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.slf4j.Logger;
@@ -26,6 +28,8 @@ import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
+import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
+import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
@@ -126,9 +130,177 @@ public class InterpolatorLogic implements ProcessingLogic {
 				
 	}
 
+	
+	// We need a local exception to distinguish a special failure mode below.
+	// Functionality is standard. We just need the special class to capture it
+	// out of all other things thrown around.
+	class NoInterpolationYetException extends IllegalArgumentException {
 
+		private static final long serialVersionUID = 1L;
+
+		public NoInterpolationYetException(String msg) {
+			super(msg);
+		}
+		
+	};
+	
+	public QueryPoiInterpolatedValuesResponse queryPoiValues(QueryPoiInterpolatedValues qpiv) {
+		
+		QueryPoiInterpolatedValuesResponse result=new QueryPoiInterpolatedValuesResponse();
+		
+		try {
+			if (qpiv==null) {
+				throw new IllegalArgumentException("Argument must not be null");
+			}
+
+			String regionID=qpiv.regionID;
+
+			if (regionID==null || regionID.isEmpty()) {
+				throw new IllegalArgumentException("regionID must not be null");
+			}
+
+			if (!pm.ySSLIdExists(regionID)) {
+				throw new IllegalArgumentException("regionID \""+regionID+"\" is unknown");
+			}
+
+			Map<String, Point> poiList=qpiv.thePoints;
+			if (poiList==null) {
+				throw new IllegalArgumentException("List of PoI's must not be null");
+			}
+			
+			StreetSegmentList sslList=pm.retrieveStreetSegmentList(regionID);
+			StreetSegmentList interpol=pm.retrieveInterpolatedValues(regionID);
+			if (interpol==null) {
+				throw new NoInterpolationYetException("no interpolated values available");
+			}
+			
+			result.theData=new HashMap<String, Map<String, Double>>();
+			
+			for (Entry<String, Point> entry : poiList.entrySet()) {
+				String pointID=entry.getKey();
+				
+				Map<String, Double> exposures=new HashMap<String, Double>();
+				
+				Point p=entry.getValue();
+				String nearestSegmentID=findNearestSegment(p, sslList);
+				
+				StreetSegment nearestSS=interpol.get(nearestSegmentID);
+				if (nearestSS==null) {
+					throw new IllegalStateException("Internal error: No interpolated segment found");
+				}
+				Double exposure=nearestSS.exposure.get("NO");
+				exposures.put("NO", exposure);
+				
+				result.theData.put(pointID, exposures);
+
+			}
+
+			
+			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.OK;
+			
+		// 3. For each point in the query:
+		// 4.    Find the nearest segment for the point in the ssl
+		// 5.    Find the same segment in the interpolated values
+		// 6.    copy all pollutants (which are requested) to the result 
+
+		} catch (NoInterpolationYetException e) {
+			e.printStackTrace();
+			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.TRY_AGAIN;
+			result.explanation=e.getMessage();						
+		} catch (Throwable t) {
+			t.printStackTrace();
+			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.ERROR;
+			result.explanation=t.toString();			
+		}
+		return result;
+	}
+
+	
+	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
+		
+		RegisterRegionResponse result=new RegisterRegionResponse();
+		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
+		try {
+			String regionID=ric.regionID;
+			StreetSegmentList ssl=ric.streetSegments;
+			
+			if (regionID==null || regionID.isEmpty())
+				throw new IllegalArgumentException("ConsumerID may not be null or empty");
+			
+			if (ssl==null || ssl.isEmpty())
+				throw new IllegalArgumentException("Street segment list may not be null and must hold at least one segment");
+			
+			Object[] c_and_r=calculateCenterAndRadius(ssl);
+			
+			
+			queryFixedStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryMobileStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			
+			pm.persistStreetSegmentList(regionID, ssl);
+
+			// TODO: This behavior is just for testing.
+			StreetSegmentList interpol=im.doInterpolation(ssl, null);
+			pm.persistInterpolatedValues(regionID, interpol);
+
+		} catch(Throwable t) {
+			log.error("Problems when registering a consumer:", t);
+			result.status=RegisterRegionResponse.StatusCode.ERROR;
+			result.explanation=t.getMessage();
+		}
+		
+		return result;
+	}
+	
+	
+	
 	// Internal logic and helpers
 	
+	private static String findNearestSegment(Point p, StreetSegmentList sslList) {
+		
+		if (sslList.size()<1) {
+			throw new IllegalArgumentException("The list of street segments has zero size");	// THis should have been tested during registration. But better safe than sorry.
+		}
+		
+		
+		String bestID=null;
+		double bestDistance=Double.MAX_VALUE;
+		
+		
+		for (Entry<String, StreetSegment> entry : sslList.entrySet()) {
+			String currentID=entry.getKey();
+			StreetSegment currentSS=entry.getValue();
+			Point currentCenter=getCenter(currentSS.segmentData);
+			
+			double currentDistance=distance(p, currentCenter);
+			
+			if (currentDistance<bestDistance) {
+				bestID=currentID;
+				bestDistance=currentDistance;
+			}
+		}
+		return bestID;
+	}
+
+	private static Point getCenter(Point[] segmentData) {
+		
+		if (segmentData.length==0) {
+			throw new IllegalArgumentException("Streetsegment has 0 points");
+		}
+		
+		Point result=new Point(0.0, 0.0);
+		
+		for (Point p : segmentData) {
+			result.lat+=p.lat;
+			result.lon=p.lon;
+		}
+		
+		
+		result.lat/=segmentData.length;
+		result.lon/=segmentData.length;
+		
+		return result;
+	}
+
 	protected List<Observation> mergeObservations( // Should be private but then it's not available for grey box unit testing
 			List<Observation> theNewObs, 
 			List<Observation> theOldObs, 
@@ -229,7 +401,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		}
 	}
 
-	private double distance(Point p1, Point p2) {	// "Flat earth" approximation. Approximation valid for "small" distances.
+	private static double distance(Point p1, Point p2) {	// "Flat earth" approximation. Approximation valid for "small" distances.
 		
 		double latitudeMean=Math.toRadians((p1.lat+p2.lat)/2.0);	// We need this to compensate geometrical shortening of distances in lon with increasing lat
 		double correctionFactor=Math.cos(latitudeMean);
@@ -281,42 +453,6 @@ public class InterpolatorLogic implements ProcessingLogic {
 		
 		return new Object[] {center, maxRadius};
 	}
-	
-	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
-		
-		RegisterRegionResponse result=new RegisterRegionResponse();
-		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
-		try {
-			String regionID=ric.regionID;
-			StreetSegmentList ssl=ric.streetSegments;
-			
-			if (regionID==null || regionID.isEmpty())
-				throw new IllegalArgumentException("ConsumerID may not be null or empty");
-			
-			if (ssl==null || ssl.isEmpty())
-				throw new IllegalArgumentException("Street segment list may not be null and must hold at least one segment");
-			
-			Object[] c_and_r=calculateCenterAndRadius(ssl);
-			
-			
-			queryFixedStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
-			queryMobileStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
-			
-			pm.persistStreetSegmentList(regionID, ssl);
-
-			// TODO: This behavior is just for testing.
-			StreetSegmentList interpol=im.doInterpolation(ssl, null);
-			pm.persistInterpolatedValues(regionID, interpol);
-
-		} catch(Throwable t) {
-			log.error("Problems when registering a consumer:", t);
-			result.status=RegisterRegionResponse.StatusCode.ERROR;
-			result.explanation=t.getMessage();
-		}
-		
-		return result;
-	}
-	
 	
 	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
 		QueryInterpolatedStreetSegmentListResponse response=new QueryInterpolatedStreetSegmentListResponse();

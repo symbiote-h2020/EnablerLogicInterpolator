@@ -25,7 +25,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
-public class TestConsumerRegistration {
+public class TestRegionRegistration {
 
 	InterpolatorLogic il;
 	EnablerLogic elMock;
