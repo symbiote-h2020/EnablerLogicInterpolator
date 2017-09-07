@@ -31,6 +31,8 @@ public class TestQueryPoiValues {
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
+		
+		reset(elMock);
 	}
 
 	@After

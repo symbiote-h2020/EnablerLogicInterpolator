@@ -26,6 +26,8 @@ public class TestQueryInterpolatedValues {
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
+		
+		reset(elMock);	// initialize has already made some calls that we don't want to know
 	}
 
 	@After

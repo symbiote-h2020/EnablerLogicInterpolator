@@ -3,12 +3,7 @@ package eu.h2020.symbiote.smeur.eli;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 
@@ -39,6 +34,8 @@ public class TestRegionRegistration {
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
+		
+		reset(elMock);	
 	}
 
 	@After
