@@ -10,8 +10,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
-import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
@@ -21,13 +21,13 @@ public class TestQueryPoiValues {
 
 	InterpolatorLogic il;
 	EnablerLogic elMock;
-	PersistenceManagerInterface pmMock; 
+	PersistenceManager pmMock; 
 	
 	@Before
 	public void setUp() throws Exception {
 		il=new InterpolatorLogic();
 		elMock=mock(EnablerLogic.class);
-		pmMock=mock(PersistenceManagerInterface.class);
+		pmMock=mock(PersistenceManager.class);
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
@@ -103,8 +103,8 @@ public class TestQueryPoiValues {
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
 		qpoi.regionID="someID";
-		qpoi.thePoints=new HashMap<String, Point>();
-		qpoi.thePoints.put("PointID", new Point(11,11));
+		qpoi.thePoints=new HashMap<String, Location>();
+		qpoi.thePoints.put("PointID", new Location(11,11, 0.0, null, null));
 
 		StreetSegmentList ssl=new StreetSegmentList();		// Maybe empty. We don't use the content in this text
 		
@@ -130,14 +130,14 @@ public class TestQueryPoiValues {
 		
 		qpoi.regionID="someID";
 		qpoi.regionID="someID";
-		qpoi.thePoints=new HashMap<String, Point>();
-		qpoi.thePoints.put("PointID", new Point(11,11));
+		qpoi.thePoints=new HashMap<String, Location>();
+		qpoi.thePoints.put("PointID", new Location(11,11, 0.0, null, null));
 
 		StreetSegmentList ssl=new StreetSegmentList();		// Maybe empty. We don't use the content in this text
 		StreetSegment ss=new StreetSegment();
 
 		ss.id="Who cares";
-		ss.segmentData=new Point[] {new Point(10, 10)};
+		ss.segmentData=new Location[] {new Location(10.0, 10.0, 0.0, null, null)};
 		ss.exposure=new HashMap<String, Double>();			// We fill both, points and exposure here as we are lazy and reuse the same list for points and exposures.
 		ss.exposure.put("NO", 3.14);
 

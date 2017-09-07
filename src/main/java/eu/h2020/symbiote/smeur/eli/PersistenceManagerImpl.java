@@ -27,7 +27,7 @@ import com.mongodb.client.model.UpdateOptions;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
-public class PersistenceManagerImpl implements PersistenceManagerInterface {
+public class PersistenceManagerImpl implements PersistenceManager {
 
 	String databaseName="symbiote_eli_database";	// Note: Not final on purpose
 	

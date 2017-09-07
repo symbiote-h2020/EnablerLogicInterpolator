@@ -12,9 +12,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
-import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
@@ -24,13 +24,13 @@ public class TestRegionRegistration {
 
 	InterpolatorLogic il;
 	EnablerLogic elMock;
-	PersistenceManagerInterface pmMock; 
+	PersistenceManager pmMock; 
 	
 	@Before
 	public void setUp() throws Exception {
 		il=new InterpolatorLogic();
 		elMock=mock(EnablerLogic.class);
-		pmMock=mock(PersistenceManagerInterface.class);
+		pmMock=mock(PersistenceManager.class);
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
@@ -84,7 +84,7 @@ public class TestRegionRegistration {
 
 		StreetSegment ss=new StreetSegment();
 		ss.id="1";
-		ss.segmentData=new Point[] {new Point(1.0, 2.0), new Point(5.0, 6.0)}; // Center=3.0, 4.0
+		ss.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(5.0, 6.0, 0.0, null, null)}; // Center=3.0, 4.0
 		ric.streetSegments.put(ss.id, ss);
 
 

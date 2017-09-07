@@ -38,7 +38,7 @@ public class TestEnablerLogicConnection {
 	
 	InterpolatorLogic il;
 	EnablerLogic el;
-	PersistenceManagerInterface pmMock;
+	PersistenceManager pmMock;
 	
 	
 	SyncMessageFromEnablerLogicConsumer syncConsumer;
@@ -51,7 +51,7 @@ public class TestEnablerLogicConnection {
 		syncConsumer=new SyncMessageFromEnablerLogicConsumer();
 		el.setSyncConsumer(syncConsumer);
 		
-		pmMock=mock(PersistenceManagerInterface.class);
+		pmMock=mock(PersistenceManager.class);
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(el);

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
@@ -23,7 +24,6 @@ import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStart
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
-import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
@@ -39,7 +39,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 	
 	private EnablerLogic enablerLogic;
 
-	private PersistenceManagerInterface pm=null;
+	private PersistenceManager pm=null;
 	private InterpolationManagerInterface im=null;
 
 	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
@@ -52,7 +52,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 	 * If the Manager is not set here, the init phase will create a suitable default manager. 
 	 * @param pmMock
 	 */
-	public void setPersistenceManager(PersistenceManagerInterface pm) {
+	public void setPersistenceManager(PersistenceManager pm) {
 		this.pm=pm;
 	}
 
@@ -163,7 +163,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 				throw new IllegalArgumentException("regionID \""+regionID+"\" is unknown");
 			}
 
-			Map<String, Point> poiList=qpiv.thePoints;
+			Map<String, Location> poiList=qpiv.thePoints;
 			if (poiList==null) {
 				throw new IllegalArgumentException("List of PoI's must not be null");
 			}
@@ -176,13 +176,13 @@ public class InterpolatorLogic implements ProcessingLogic {
 			
 			result.theData=new HashMap<String, Map<String, Double>>();
 			
-			for (Entry<String, Point> entry : poiList.entrySet()) {
+			for (Entry<String, Location> entry : poiList.entrySet()) {
 				String pointID=entry.getKey();
 				
 				Map<String, Double> exposures=new HashMap<String, Double>();
 				
-				Point p=entry.getValue();
-				String nearestSegmentID=findNearestSegment(p, sslList);
+				Location l=entry.getValue();
+				String nearestSegmentID=findNearestSegment(l, sslList);
 				
 				StreetSegment nearestSS=interpol.get(nearestSegmentID);
 				if (nearestSS==null) {
@@ -233,8 +233,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
 			
 			
-			queryFixedStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
-			queryMobileStations(enablerLogic, regionID, (Point)c_and_r[0], (Double)c_and_r[1]);
+			queryFixedStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
+			queryMobileStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
 			
 			pm.persistStreetSegmentList(regionID, ssl);
 
@@ -255,7 +255,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 	
 	// Internal logic and helpers
 	
-	private static String findNearestSegment(Point p, StreetSegmentList sslList) {
+	private static String findNearestSegment(Location l, StreetSegmentList sslList) {
 		
 		if (sslList.size()<1) {
 			throw new IllegalArgumentException("The list of street segments has zero size");	// THis should have been tested during registration. But better safe than sorry.
@@ -269,9 +269,9 @@ public class InterpolatorLogic implements ProcessingLogic {
 		for (Entry<String, StreetSegment> entry : sslList.entrySet()) {
 			String currentID=entry.getKey();
 			StreetSegment currentSS=entry.getValue();
-			Point currentCenter=getCenter(currentSS.segmentData);
+			Location currentCenter=getCenter(currentSS.segmentData);
 			
-			double currentDistance=distance(p, currentCenter);
+			double currentDistance=distance(l, currentCenter);
 			
 			if (currentDistance<bestDistance) {
 				bestID=currentID;
@@ -281,22 +281,27 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return bestID;
 	}
 
-	private static Point getCenter(Point[] segmentData) {
+	private static Location getCenter(Location[] segmentData) {
 		
 		if (segmentData.length==0) {
 			throw new IllegalArgumentException("Streetsegment has 0 points");
 		}
+	
+		double latMean=0.0;
+		double lonMean=0.0;
 		
-		Point result=new Point(0.0, 0.0);
-		
-		for (Point p : segmentData) {
-			result.lat+=p.lat;
-			result.lon=p.lon;
+		for (Location p : segmentData) {
+			latMean+=p.getLatitude();
+			lonMean+=p.getLongitude();
 		}
 		
 		
-		result.lat/=segmentData.length;
-		result.lon/=segmentData.length;
+		latMean/=segmentData.length;
+		lonMean/=segmentData.length;
+
+		Location result=new Location(lonMean, latMean, 0.0, null, null);
+			
+
 		
 		return result;
 	}
@@ -353,7 +358,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 
 
 	
-	protected void queryFixedStations(EnablerLogic el, String consumerID, Point center, Double radius) {
+	protected void queryFixedStations(EnablerLogic el, String consumerID, Location center, Double radius) {
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
 		request.setTaskId(consumerID+":fixed");
 		request.setEnablerLogicName("interpolator");
@@ -364,8 +369,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 									// If we miss one reading by just 1 second and we set the interval to 30 mins we
 									// are always 29 mins and 59 late.
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
-		coreQueryRequest.setLocation_lat(center.lat);
-		coreQueryRequest.setLocation_long(center.lon);
+		coreQueryRequest.setLocation_lat(center.getLatitude());
+		coreQueryRequest.setLocation_long(center.getLongitude());
 		coreQueryRequest.setMax_distance((int)(radius*1000)); // radius 10km
 		coreQueryRequest.setObserved_property(Arrays.asList("NOx"));
 		request.setCoreQueryRequest(coreQueryRequest);
@@ -378,7 +383,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		}
 	}
 
-	protected void queryMobileStations(EnablerLogic el, String consumerID, Point c, Double r) {
+	protected void queryMobileStations(EnablerLogic el, String consumerID, Location c, Double r) {
 		
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
 		request.setTaskId(consumerID+":mobile");
@@ -387,8 +392,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 		request.setCachingInterval("P0000-00-00T00:01:00"); // 1 min
 
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
-		coreQueryRequest.setLocation_lat(c.lat);
-		coreQueryRequest.setLocation_long(c.lon);
+		coreQueryRequest.setLocation_lat(c.getLatitude());
+		coreQueryRequest.setLocation_long(c.getLongitude());
 		coreQueryRequest.setMax_distance((int)(r*1000));
 		coreQueryRequest.setObserved_property(Arrays.asList("NOx"));
 		request.setCoreQueryRequest(coreQueryRequest);
@@ -401,13 +406,13 @@ public class InterpolatorLogic implements ProcessingLogic {
 		}
 	}
 
-	private static double distance(Point p1, Point p2) {	// "Flat earth" approximation. Approximation valid for "small" distances.
+	private static double distance(Location p1, Location p2) {	// "Flat earth" approximation. Approximation valid for "small" distances.
 		
-		double latitudeMean=Math.toRadians((p1.lat+p2.lat)/2.0);	// We need this to compensate geometrical shortening of distances in lon with increasing lat
+		double latitudeMean=Math.toRadians((p1.getLatitude()+p2.getLatitude())/2.0);	// We need this to compensate geometrical shortening of distances in lon with increasing lat
 		double correctionFactor=Math.cos(latitudeMean);
 		
-		double diffLat=Math.toRadians(p1.lat-p2.lat);
-		double diffLon=Math.toRadians(p1.lon-p2.lon)*correctionFactor;
+		double diffLat=Math.toRadians(p1.getLatitude()-p2.getLatitude());
+		double diffLon=Math.toRadians(p1.getLongitude()-p2.getLongitude())*correctionFactor;
 		
 		double distanceInRadian=Math.sqrt(diffLat*diffLat+diffLon*diffLon);	// Radians or fractions of the earth radius
 		double distanceInKm=6_371.009 * distanceInRadian; 
@@ -424,11 +429,11 @@ public class InterpolatorLogic implements ProcessingLogic {
 		Iterator<Entry<String, StreetSegment>> it=streetSegments.entrySet().iterator();
 		while (it.hasNext()) {
 			StreetSegment ss=it.next().getValue();
-			for (Point p : ss.segmentData) {
-				minLat=Math.min(minLat, p.lat);
-				maxLat=Math.max(maxLat, p.lat);
-				minLon=Math.min(minLon, p.lon);
-				maxLon=Math.max(maxLon, p.lon);
+			for (Location p : ss.segmentData) {
+				minLat=Math.min(minLat, p.getLatitude());
+				maxLat=Math.max(maxLat, p.getLatitude());
+				minLon=Math.min(minLon, p.getLongitude());
+				maxLon=Math.max(maxLon, p.getLongitude());
 			}
 		}
 		
@@ -436,7 +441,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		double centerLat=(minLat+maxLat)/2.0;
 		double centerLon=(minLon+maxLon)/2.0;
 
-		Point center=new Point(centerLon, centerLat);
+		Location center=new Location(centerLon, centerLat, 0.0, null, null);
 
 
 		double maxRadius=0.0;
@@ -444,8 +449,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 		it=streetSegments.entrySet().iterator();
 		while (it.hasNext()) {
 			StreetSegment ss=it.next().getValue();
-			for (Point p : ss.segmentData) {
-				double dist=distance(p, center);
+			for (Location l : ss.segmentData) {
+				double dist=distance(l, center);
 				maxRadius=Math.max(maxRadius, dist);
 			}
 		}

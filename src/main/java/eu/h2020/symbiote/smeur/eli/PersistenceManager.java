@@ -12,7 +12,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
  * @author DuennebeilG
  *
  */
-public interface PersistenceManagerInterface {
+public interface PersistenceManager {
 	
 	
 	// Deal with street segments here (input data)

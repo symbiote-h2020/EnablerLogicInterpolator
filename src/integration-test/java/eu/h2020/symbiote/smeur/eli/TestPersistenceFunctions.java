@@ -10,8 +10,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
+import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.smeur.Point;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -77,7 +77,7 @@ public class TestPersistenceFunctions {
 		// Non-Empty segment
 
 		theSegment.id="ID1";
-		theSegment.segmentData=new Point[] {new Point(1.0, 2.0), new Point(3.0, 4.0)};
+		theSegment.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(3.0, 4.0, 0.0, null, null)};
 		theSegment.comment="This is all so stupid :-)";
 		
 		pm.persistStreetSegmentList("some id", ssl);
