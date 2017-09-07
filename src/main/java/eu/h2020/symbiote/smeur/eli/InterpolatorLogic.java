@@ -73,22 +73,22 @@ public class InterpolatorLogic implements ProcessingLogic {
 		this.enablerLogic = enablerLogic;
 
 		if (pm==null) // Might have been already injected
-			this.pm=new PersistenceManager();
+			this.pm=new PersistenceManagerImpl();
 
 		this.im=new InterpolationManagerDummyInterpolation();
 
-//		public String registerConsumer(RegisterInterpolationConsumer ric) {
+		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
+				RegisterRegion.class, 
+			    (m) -> this.registerRegion(m));
+		
+		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
+				QueryInterpolatedStreetSegmentList.class, 
+			    (m) -> this.queryInterpolatedData(m));
 
+		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
+				QueryPoiInterpolatedValues.class, 
+			    (m) -> this.queryPoiValues(m));
 
-//		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
-//				RegisterInterpolationConsumer.class, 
-//			    (m) -> registerConsumer(m));
-		
-		// Read persistent data from Mongo here
-		
-		
-//		queryFixedStations(enablerLogic);
-//		queryMobileStations(enablerLogic);
 	}
 
 	@Override

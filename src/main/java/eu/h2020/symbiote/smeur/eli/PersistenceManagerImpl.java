@@ -27,7 +27,7 @@ import com.mongodb.client.model.UpdateOptions;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
-public class PersistenceManager implements PersistenceManagerInterface {
+public class PersistenceManagerImpl implements PersistenceManagerInterface {
 
 	String databaseName="symbiote_eli_database";	// Note: Not final on purpose
 	
@@ -99,37 +99,21 @@ public class PersistenceManager implements PersistenceManagerInterface {
 
 	@Override
 	public StreetSegmentList retrieveStreetSegmentList(String sslID) {
-		Bson filter=Filters.eq(sslID);
-		FindIterable<Document> documentIter=collSSL.find(filter);
 		
-		Document document=documentIter.first();
-		
-		String json=document.toJson();
-
-        ObjectMapper mapper = new ObjectMapper();
-        StreetSegmentListDocument ssld=null;
-        try {
-			ssld=mapper.readValue(json, StreetSegmentListDocument.class);
-		} catch (JsonParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JsonMappingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+		Object o=retrieveGeneric(sslID, collSSL, StreetSegmentListDocument.class);
+		if (o==null)
+			return null;
+        StreetSegmentListDocument ssld=(StreetSegmentListDocument)o;
 		return ssld.theList;
 	}
+
 
 	@Override
 	public boolean ySSLIdExists(String sslID) {
 		Bson filter=Filters.eq(sslID);
 		
 		long n=collSSL.count(filter);
-		if (n>1)	// JUst a safeguard in case mongoDB has some ugly surprises for us.
+		if (n>1)	// Just a safeguard in case mongoDB has some ugly surprises for us.
 			throw new IllegalStateException("More than one document for id "+sslID+ ". This shouldn't happen");
 		
 		return n==1;
@@ -169,31 +153,12 @@ public class PersistenceManager implements PersistenceManagerInterface {
 	 */
 	@Override
 	public StreetSegmentList retrieveInterpolatedValues(String sslID) {
-		Bson filter=Filters.eq(sslID);
-		FindIterable<Document> documentIter=collInterpol.find(filter);
 		
-		Document document=documentIter.first();
-		if (document==null)	// The the short way out when document does not exist.
+		Object o=retrieveGeneric(sslID, collInterpol, InterpolatedValuesDocument.class);
+		if (o==null)
 			return null;
-		
-		String json=document.toJson();
-
-        ObjectMapper mapper = new ObjectMapper();
-        InterpolatedValuesDocument interpold=null;
-        try {
-			interpold=mapper.readValue(json, InterpolatedValuesDocument.class);
-		} catch (JsonParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JsonMappingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return interpold.theList;
+		InterpolatedValuesDocument interpold=(InterpolatedValuesDocument)o;
+		return interpold.theList;		
 	}
 
 	
@@ -222,31 +187,14 @@ public class PersistenceManager implements PersistenceManagerInterface {
 
 	@Override
 	public List<Observation> retrieveObservations(String sslID) {
-		Bson filter=Filters.eq(sslID);
-		FindIterable<Document> documentIter=collObservations.find(filter);
 		
-		Document document=documentIter.first();
-		if (document==null)	// The the short way out when document does not exist.
+		
+		Object o=retrieveGeneric(sslID, collObservations, ObservationsDocument.class);
+		if (o==null)
 			return null;
-		
-		String json=document.toJson();
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObservationsDocument obsd=null;
-        try {
-        	obsd=mapper.readValue(json, ObservationsDocument.class);
-		} catch (JsonParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JsonMappingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+		ObservationsDocument obsd=(ObservationsDocument)o;
 		return obsd.theList;
+
 	}
 	
 	
@@ -314,7 +262,7 @@ public class PersistenceManager implements PersistenceManagerInterface {
 		try {
 			Constructor<?> constructor=findCompatibleConstructor(documentClass, String.class, content.getClass());
 			if (constructor==null) {
-				throw new IllegalStateException("Tottaly confused");
+				throw new IllegalStateException("Totally confused");
 			}
 			Object doc=constructor.newInstance(id, content);
 
@@ -349,5 +297,34 @@ public class PersistenceManager implements PersistenceManagerInterface {
 		}
 				
 	}
+
+	private Object retrieveGeneric(String sslID, MongoCollection<Document> coll, Class<?> documentClass) {
+
+		Bson filter=Filters.eq(sslID);
+		FindIterable<Document> documentIter=coll.find(filter);
 		
+		Document document=documentIter.first();
+		if (document==null)
+			return null;
+		
+		String json=document.toJson();
+
+        ObjectMapper mapper = new ObjectMapper();
+        Object wrapperDoc=null;
+        try {
+        	wrapperDoc=mapper.readValue(json, documentClass);
+		} catch (JsonParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return wrapperDoc;
+	}
+
+	
 }

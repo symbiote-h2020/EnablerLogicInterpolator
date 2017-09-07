@@ -40,7 +40,7 @@ import io.arivera.oss.embedded.rabbitmq.bin.RabbitMqPlugins;
 
 @RunWith(SpringRunner.class)
 @Import({RabbitManager.class})
-@Ignore
+@Ignore									// Test environment too complicated. I'll keep this test only as a reference for certain techniques.
 public class queryMessagesTest {
 
 	// This class provides configuration for the test spring environment. Note the @Configuration annotation

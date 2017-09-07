@@ -17,11 +17,11 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 
 public class TestPersistenceFunctions {
 	
-	PersistenceManager pm;
+	PersistenceManagerImpl pm;
 	
 	@Before
 	public void setup() {
-		pm=new PersistenceManager();
+		pm=new PersistenceManagerImpl();
 		
 		pm.useDebugDatabase();
 		pm.wipeoutDB();
@@ -32,7 +32,7 @@ public class TestPersistenceFunctions {
 	
 	@AfterClass
 	public static void finalCleanup() {
-		PersistenceManager pm=new PersistenceManager();	// We need a private instance here as afterClass requires a static signature.
+		PersistenceManagerImpl pm=new PersistenceManagerImpl();	// We need a private instance here as afterClass requires a static signature.
 		
 		pm.useDebugDatabase();
 		pm.wipeoutDB();
