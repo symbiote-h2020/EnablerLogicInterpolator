@@ -13,7 +13,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 public class InterpolationManager implements InterpolationManagerInterface {
 
 	@Override
-	public void startInterpolation(String regionID, PersistenceManagerInterface pm) {
+	public void startInterpolation(String regionID, PersistenceManager pm) {
 		// TODO Auto-generated method stub
 		
 	}

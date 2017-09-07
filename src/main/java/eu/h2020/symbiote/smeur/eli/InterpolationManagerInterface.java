@@ -7,7 +7,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 
 public interface InterpolationManagerInterface {
 	
-	public void startInterpolation(String regionID, PersistenceManagerInterface pm);
+	public void startInterpolation(String regionID, PersistenceManager pm);
 	
 	public StreetSegmentList doInterpolation(StreetSegmentList ssl, List<Observation> observations);
 }

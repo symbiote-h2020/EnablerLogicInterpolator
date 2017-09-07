@@ -16,13 +16,13 @@ public class TestQueryInterpolatedValues {
 
 	InterpolatorLogic il;
 	EnablerLogic elMock;
-	PersistenceManagerInterface pmMock; 
+	PersistenceManager pmMock; 
 	
 	@Before
 	public void setUp() throws Exception {
 		il=new InterpolatorLogic();
 		elMock=mock(EnablerLogic.class);
-		pmMock=mock(PersistenceManagerInterface.class);
+		pmMock=mock(PersistenceManager.class);
 		
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);

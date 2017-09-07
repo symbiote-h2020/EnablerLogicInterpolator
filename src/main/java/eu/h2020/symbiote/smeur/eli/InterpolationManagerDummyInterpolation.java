@@ -38,7 +38,7 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 	}
 	
 	
-	public void startInterpolation(String regionID, PersistenceManagerInterface pm) {
+	public void startInterpolation(String regionID, PersistenceManager pm) {
 		StreetSegmentList ssl=pm.retrieveStreetSegmentList(regionID);
 		if (ssl==null)
 			return;	// Shouldn't happen.
