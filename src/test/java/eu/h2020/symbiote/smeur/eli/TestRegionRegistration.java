@@ -151,11 +151,11 @@ public class TestRegionRegistration {
 		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
 		
 		
-		// 4. The StreetSegmentList should be stored through the Persistence Manager.
+		// 4. The region information should be stored through the Persistence Manager.
 		verify(pmMock, times(1)).persistRegionInformation(anyString(), anyObject()); 
 		
 		List<String> capturedIDs=idCapture.getAllValues();
 		assertEquals("SomeID", capturedIDs.get(0));
-		assertEquals(ric, riCapture.getAllValues().get(0));
+		assertEquals(ric.streetSegments, riCapture.getAllValues().get(0).theList);
 	}
 }

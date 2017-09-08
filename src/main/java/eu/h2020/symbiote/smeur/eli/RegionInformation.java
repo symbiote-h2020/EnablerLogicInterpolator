@@ -1,8 +1,6 @@
 package eu.h2020.symbiote.smeur.eli;
 
 
-import static org.mockito.Matchers.anyShort;
-
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
