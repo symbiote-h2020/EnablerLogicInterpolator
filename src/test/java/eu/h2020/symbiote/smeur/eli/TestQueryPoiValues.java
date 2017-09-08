@@ -152,19 +152,19 @@ public class TestQueryPoiValues {
 		qpoir=il.queryPoiValues(qpoi);
 
 		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.OK, qpoir.status);
-		Map<String, Map<String, Double>> theData=qpoir.theData;
+		Map<String, Map<String, ObservationValue>> theData=qpoir.theData;
 		assertNotNull(theData);
 		
 		assertEquals(1, theData.size());				// We queried one PoI, so the result should be 1
 		assertTrue(theData.containsKey("PointID"));		// We queried it, so it should be there
 		
-		Map<String, Double> exposures=theData.get("PointID");
+		Map<String, ObservationValue> exposures=theData.get("PointID");
 		
 		assertNotNull(exposures);
 		assertEquals(1, exposures.size());				// Must change when the query defines the pollutants
 		assertTrue(exposures.containsKey("NO"));		// Must change when the query defines the pollutants
-		Double exposure=exposures.get("NO");			// Must change when the query defines the pollutants
-		assertEquals(3.14, exposure, 0.000001);
+		ObservationValue exposure=exposures.get("NO");			// Must change when the query defines the pollutants
+		assertEquals("3.14", exposure.getValue());
 		
 		verifyZeroInteractions(elMock);
 	}

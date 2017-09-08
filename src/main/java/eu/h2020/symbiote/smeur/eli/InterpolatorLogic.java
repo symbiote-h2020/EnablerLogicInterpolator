@@ -175,12 +175,12 @@ public class InterpolatorLogic implements ProcessingLogic {
 				throw new NoInterpolationYetException("no interpolated values available");
 			}
 			
-			result.theData=new HashMap<String, Map<String, Double>>();
+			result.theData=new HashMap<String, Map<String, ObservationValue>>();
 			
 			for (Entry<String, Location> entry : poiList.entrySet()) {
 				String pointID=entry.getKey();
 				
-				Map<String, Double> exposures=new HashMap<String, Double>();
+				Map<String, ObservationValue> exposures=new HashMap<String, ObservationValue>();
 				
 				Location l=entry.getValue();
 				String nearestSegmentID=findNearestSegment(l, sslList);
@@ -190,9 +190,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 					throw new IllegalStateException("Internal error: No interpolated segment found");
 				}
 				ObservationValue exposure=nearestSS.exposure.get("NO");
-				String exposureValue=exposure.getValue();
-				double dExpValue=Double.parseDouble(exposureValue);
-				exposures.put("NO", dExpValue);
+				exposures.put("NO", exposure);
 				
 				result.theData.put(pointID, exposures);
 
