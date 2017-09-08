@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
@@ -188,8 +189,10 @@ public class InterpolatorLogic implements ProcessingLogic {
 				if (nearestSS==null) {
 					throw new IllegalStateException("Internal error: No interpolated segment found");
 				}
-				Double exposure=nearestSS.exposure.get("NO");
-				exposures.put("NO", exposure);
+				ObservationValue exposure=nearestSS.exposure.get("NO");
+				String exposureValue=exposure.getValue();
+				double dExpValue=Double.parseDouble(exposureValue);
+				exposures.put("NO", dExpValue);
 				
 				result.theData.put(pointID, exposures);
 

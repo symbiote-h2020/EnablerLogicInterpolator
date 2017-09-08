@@ -1,13 +1,12 @@
 package eu.h2020.symbiote.smeur.eli;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.concurrent.Callable;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -68,11 +67,12 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 
 	private void fillInterpolatedValues(StreetSegment ss) {
 		if (ss.exposure==null) {
-			ss.exposure=new HashMap<String, Double>();
+			ss.exposure=new HashMap<String, ObservationValue>();
 		}
 		ss.exposure.clear();
 		
-		ss.exposure.put("NO2", random.nextDouble()*100);
+		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), null, null); 
+		ss.exposure.put("NO2", obsValue);
 		
 	}
 	

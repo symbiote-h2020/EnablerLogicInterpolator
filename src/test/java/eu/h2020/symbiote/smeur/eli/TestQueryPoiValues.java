@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
@@ -138,8 +139,8 @@ public class TestQueryPoiValues {
 
 		ss.id="Who cares";
 		ss.segmentData=new Location[] {new Location(10.0, 10.0, 0.0, null, null)};
-		ss.exposure=new HashMap<String, Double>();			// We fill both, points and exposure here as we are lazy and reuse the same list for points and exposures.
-		ss.exposure.put("NO", 3.14);
+		ss.exposure=new HashMap<String, ObservationValue>();			// We fill both, points and exposure here as we are lazy and reuse the same list for points and exposures.
+		ss.exposure.put("NO", new ObservationValue("3.14", null, null));
 
 		ssl.put("Who cares", ss);
 		
