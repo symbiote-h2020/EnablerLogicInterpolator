@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.assertj.core.util.Objects;
+import java.util.Objects;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.smeur.StreetSegment;
@@ -63,16 +63,16 @@ public class RegionInformation {
 		
 		RegionInformation or=(RegionInformation)o;
 		
-		if (!Objects.areEqual(this.regionID, or.regionID))
+		if (!Objects.equals(this.regionID, or.regionID))
 			return false;
 		
-		if (!Objects.areEqual(this.properties, or.properties))
+		if (!Objects.equals(this.properties, or.properties))
 			return false;
 		
-		if (!Objects.areEqual(this.theList, or.theList))
+		if (!Objects.equals(this.theList, or.theList))
 			return false;
 		
-		if (!Objects.areEqual(this.dateRegistered, or.dateRegistered))
+		if (!Objects.equals(this.dateRegistered, or.dateRegistered))
 			return false;
 		
 		if (this.yWantsPushing!=or.yWantsPushing)
