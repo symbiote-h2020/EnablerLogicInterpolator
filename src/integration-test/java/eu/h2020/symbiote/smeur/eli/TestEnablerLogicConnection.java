@@ -96,8 +96,7 @@ public class TestEnablerLogicConnection {
 			Object o=syncConsumer.receivedSyncMessage(msg);
 			assertTrue(o instanceof RegisterRegionResponse);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			fail("");
 		}
 	}
 
@@ -112,8 +111,7 @@ public class TestEnablerLogicConnection {
 			Object o=syncConsumer.receivedSyncMessage(msg);
 			assertTrue(o instanceof QueryInterpolatedStreetSegmentListResponse);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			fail("");
 		}
 	}
 
@@ -128,8 +126,7 @@ public class TestEnablerLogicConnection {
 			Object o=syncConsumer.receivedSyncMessage(msg);
 			assertTrue(o instanceof QueryPoiInterpolatedValuesResponse);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			fail("");
 		}
 	}
 

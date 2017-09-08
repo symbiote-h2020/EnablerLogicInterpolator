@@ -12,6 +12,8 @@ import org.junit.Test;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
+
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -48,13 +50,15 @@ public class TestPersistenceFunctions {
 
 		
 		// Empty streetSegementList
-		StreetSegmentList ssl=new StreetSegmentList(); 
+		StreetSegmentList ssl=new StreetSegmentList();
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.theList=ssl;
 		
-		pm.persistStreetSegmentList("some id", ssl);
+		pm.persistRegionInformation("some id", regInfo);
 		
-		StreetSegmentList sslReadBack=pm.retrieveStreetSegmentList("some id");
+		RegionInformation regInfoReadBack=pm.retrieveRegionInformation("some id");
 		
-		assert(ssl.equals(sslReadBack));
+		assertEquals(regInfo, regInfoReadBack);
 
 		
 		yExists=pm.ySSLIdExists("some id");
@@ -67,11 +71,11 @@ public class TestPersistenceFunctions {
 		ssl.put("SegmentID", theSegment);
 
 		
-		pm.persistStreetSegmentList("some id", ssl);
+		pm.persistRegionInformation("some id", regInfo);
 		
-		sslReadBack=pm.retrieveStreetSegmentList("some id");
+		regInfoReadBack=pm.retrieveRegionInformation("some id");
 		
-		assert(ssl.equals(sslReadBack));
+		assertEquals(regInfo, regInfoReadBack);
 
 		
 		// Non-Empty segment
@@ -80,11 +84,11 @@ public class TestPersistenceFunctions {
 		theSegment.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(3.0, 4.0, 0.0, null, null)};
 		theSegment.comment="This is all so stupid :-)";
 		
-		pm.persistStreetSegmentList("some id", ssl);
+		pm.persistRegionInformation("some id", regInfo);
 		
-		sslReadBack=pm.retrieveStreetSegmentList("some id");
+		regInfoReadBack=pm.retrieveRegionInformation("some id");
 		
-		assert(ssl.equals(sslReadBack));
+		assertEquals(regInfo, regInfoReadBack);
 		
 	}
 	
@@ -95,9 +99,9 @@ public class TestPersistenceFunctions {
 		StreetSegment theSegment=new StreetSegment();
 		theSegment.id="ID1";
 		theSegment.comment="This is all so stupid :-)";
-		theSegment.exposure=new HashMap<String, Double>();
+		theSegment.exposure=new HashMap<String, ObservationValue>();
 		
-		theSegment.exposure.put("NOx", 3.14);
+		theSegment.exposure.put("NOx", new ObservationValue("3.14", null, null));
 		
 		ssl.put("SegmentID", theSegment);
 		

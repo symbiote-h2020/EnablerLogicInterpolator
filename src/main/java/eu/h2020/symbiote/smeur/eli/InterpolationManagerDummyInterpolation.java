@@ -38,10 +38,13 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 	
 	
 	public void startInterpolation(String regionID, PersistenceManager pm) {
-		StreetSegmentList ssl=pm.retrieveStreetSegmentList(regionID);
-		if (ssl==null)
+		RegionInformation regInfo=pm.retrieveRegionInformation(regionID);
+		if (regInfo==null)
 			return;	// Shouldn't happen.
 		
+		
+		StreetSegmentList ssl=regInfo.theList;
+		// TODO: Convey properties, too
 		StreetSegmentList interpolated=doInterpolation(ssl, null);
 		
 		pm.persistInterpolatedValues(regionID, interpolated);

@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
+import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
@@ -169,7 +171,8 @@ public class InterpolatorLogic implements ProcessingLogic {
 				throw new IllegalArgumentException("List of PoI's must not be null");
 			}
 			
-			StreetSegmentList sslList=pm.retrieveStreetSegmentList(regionID);
+			RegionInformation regInfo=pm.retrieveRegionInformation(regionID);
+			StreetSegmentList sslList=regInfo.theList;
 			StreetSegmentList interpol=pm.retrieveInterpolatedValues(regionID);
 			if (interpol==null) {
 				throw new NoInterpolationYetException("no interpolated values available");
@@ -231,13 +234,22 @@ public class InterpolatorLogic implements ProcessingLogic {
 			if (ssl==null || ssl.isEmpty())
 				throw new IllegalArgumentException("Street segment list may not be null and must hold at least one segment");
 			
+			Set<Property> properties=ric.properties;
+			if (properties==null || properties.isEmpty())
+				throw new IllegalArgumentException("List of properties must not be null or empty");
+			
+			
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
 			
 			
 			queryFixedStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
 			queryMobileStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
 			
-			pm.persistStreetSegmentList(regionID, ssl);
+			RegionInformation regInfo=new RegionInformation();
+			regInfo.regionID=regionID;
+			regInfo.theList=ssl;
+			
+			pm.persistRegionInformation(regionID, regInfo);
 
 			// TODO: This behavior is just for testing.
 			StreetSegmentList interpol=im.doInterpolation(ssl, null);

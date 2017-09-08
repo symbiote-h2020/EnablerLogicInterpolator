@@ -23,15 +23,15 @@ public interface PersistenceManager {
 	public void init();
 	
 	/**
-	 * Store a street segment list for later use into the mongoDB.
+	 * Store a region information for later use into the mongoDB.
 	 */
-	public void persistStreetSegmentList(String sslID, StreetSegmentList ssl);
+	public void persistRegionInformation(String sslID, RegionInformation ssl);
 
 	/**
-	 * Retrieve a SSL from the storage.
+	 * Retrieve a region information from the storage.
 	 * @return
 	 */
-	StreetSegmentList retrieveStreetSegmentList(String sslID);
+	RegionInformation retrieveRegionInformation(String sslID);
 	
 	/**
 	 * Find out whether a certain sslID exists.

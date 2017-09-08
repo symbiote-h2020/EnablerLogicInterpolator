@@ -5,6 +5,7 @@ import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.util.HashSet;
 import java.util.List;
 
 import org.junit.After;
@@ -13,6 +14,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
+import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
@@ -68,6 +70,20 @@ public class TestRegionRegistration {
 		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
 		assertNotNull(ricr.explanation);		
 		verifyZeroInteractions(elMock);
+
+		ssl.put("SomeID", new StreetSegment());
+		ricr=il.registerRegion(ric);	// Properties set is null --> fail
+		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
+		assertNotNull(ricr.explanation);		
+		verifyZeroInteractions(elMock);
+
+		ric.properties=new HashSet<Property>();
+		ricr=il.registerRegion(ric);	// Properties set is empty --> fail
+		assertEquals(RegisterRegionResponse.StatusCode.ERROR, ricr.status);
+		assertNotNull(ricr.explanation);		
+		verifyZeroInteractions(elMock);
+		
+
 				
 	}
 
@@ -87,15 +103,19 @@ public class TestRegionRegistration {
 		ss.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(5.0, 6.0, 0.0, null, null)}; // Center=3.0, 4.0
 		ric.streetSegments.put(ss.id, ss);
 
+		ric.properties=new HashSet<Property>();
+		ric.properties.add(new Property("NO", null));
+		ric.properties.add(new Property("O3", null));
+		
 
 		// Expect...
 		ArgumentCaptor<ResourceManagerTaskInfoRequest> resourceRequestCapture = ArgumentCaptor.forClass(ResourceManagerTaskInfoRequest.class);
 		when(elMock.queryResourceManager(resourceRequestCapture.capture())).thenReturn(null);
 		
 		ArgumentCaptor<String> idCapture=ArgumentCaptor.forClass(String.class);
-		ArgumentCaptor<StreetSegmentList> sslCapture=ArgumentCaptor.forClass(StreetSegmentList.class);
+		ArgumentCaptor<RegionInformation> riCapture=ArgumentCaptor.forClass(RegionInformation.class);
 
-		doNothing().when(pmMock).persistStreetSegmentList(idCapture.capture(), sslCapture.capture());
+		doNothing().when(pmMock).persistRegionInformation(idCapture.capture(), riCapture.capture());
 		
 		
 		// Here's the testee call!!!
@@ -132,10 +152,10 @@ public class TestRegionRegistration {
 		
 		
 		// 4. The StreetSegmentList should be stored through the Persistence Manager.
-		verify(pmMock, times(1)).persistStreetSegmentList(anyString(), anyObject());	// Needs to be two times as Mockito seems to also count 
+		verify(pmMock, times(1)).persistRegionInformation(anyString(), anyObject()); 
 		
 		List<String> capturedIDs=idCapture.getAllValues();
 		assertEquals("SomeID", capturedIDs.get(0));
-		assertEquals(ric.streetSegments, sslCapture.getAllValues().get(0));
+		assertEquals(ric, riCapture.getAllValues().get(0));
 	}
 }

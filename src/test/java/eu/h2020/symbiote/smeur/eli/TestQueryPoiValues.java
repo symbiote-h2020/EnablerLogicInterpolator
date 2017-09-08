@@ -109,8 +109,11 @@ public class TestQueryPoiValues {
 
 		StreetSegmentList ssl=new StreetSegmentList();		// Maybe empty. We don't use the content in this text
 		
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.theList=ssl;
+		
 		when(pmMock.ySSLIdExists("someID")).thenReturn(true);
-		when(pmMock.retrieveStreetSegmentList("someID")).thenReturn(ssl);
+		when(pmMock.retrieveRegionInformation("someID")).thenReturn(regInfo);
 		when(pmMock.retrieveInterpolatedValues("someID")).thenReturn(null);
 		
 		qpoir=il.queryPoiValues(qpoi);
@@ -145,8 +148,11 @@ public class TestQueryPoiValues {
 		ssl.put("Who cares", ss);
 		
 		
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.theList=ssl;
+		
 		when(pmMock.ySSLIdExists("someID")).thenReturn(true);
-		when(pmMock.retrieveStreetSegmentList("someID")).thenReturn(ssl);
+		when(pmMock.retrieveRegionInformation("someID")).thenReturn(regInfo);
 		when(pmMock.retrieveInterpolatedValues("someID")).thenReturn(ssl);
 		
 		qpoir=il.queryPoiValues(qpoi);

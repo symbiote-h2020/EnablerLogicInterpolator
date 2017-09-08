@@ -75,36 +75,37 @@ public class PersistenceManagerImpl implements PersistenceManager {
 	}
 
 
-	private static class StreetSegmentListDocument {
+	@SuppressWarnings("unused")
+	private static class RegionInformationDocument {
 		public String _id;
-		public StreetSegmentList theList;
+		public RegionInformation theRegion;
 
-		public StreetSegmentListDocument() 
+		public RegionInformationDocument() 
 		{			
 		}
 		
-		public StreetSegmentListDocument(String _id, StreetSegmentList ssl) {
+		public RegionInformationDocument(String _id, RegionInformation theRegion) {
 			this._id=_id;
-			theList=ssl;
+			this.theRegion=theRegion;
 		}
 		
 	}
 	
 	@Override
-	public void persistStreetSegmentList(String sslID, StreetSegmentList ssl) {
+	public void persistRegionInformation(String sslID, RegionInformation ri) {
 
-		persistGeneric(sslID, ssl, this.collSSL, StreetSegmentListDocument.class);
+		persistGeneric(sslID, ri, this.collSSL, RegionInformationDocument.class);
 
 	}
 
 	@Override
-	public StreetSegmentList retrieveStreetSegmentList(String sslID) {
+	public RegionInformation retrieveRegionInformation(String sslID) {
 		
-		Object o=retrieveGeneric(sslID, collSSL, StreetSegmentListDocument.class);
+		Object o=retrieveGeneric(sslID, collSSL, RegionInformationDocument.class);
 		if (o==null)
 			return null;
-        StreetSegmentListDocument ssld=(StreetSegmentListDocument)o;
-		return ssld.theList;
+		RegionInformationDocument regd=(RegionInformationDocument)o;
+		return regd.theRegion;
 	}
 
 
@@ -121,6 +122,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
 	
 	// Deal with interpolated values.
+	@SuppressWarnings("unused")
 	private static class InterpolatedValuesDocument {
 		public String _id;
 		public StreetSegmentList theList;
@@ -162,6 +164,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 	}
 
 	
+	@SuppressWarnings("unused")
 	private static class ObservationsDocument {
 		public String _id;
 		public List<Observation> theList;
@@ -277,22 +280,18 @@ public class PersistenceManagerImpl implements PersistenceManager {
 			coll.replaceOne(filter, document, (new UpdateOptions()).upsert(true));
 
 		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
+			// Note, if any of the below exceptions will occur we have fucked up during the coding phase.
+			// So not much we can do to react here.
 			e.printStackTrace();
 		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (JsonProcessingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 				
