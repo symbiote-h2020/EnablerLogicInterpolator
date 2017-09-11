@@ -7,6 +7,7 @@ import java.util.Random;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
+import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -16,7 +17,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
  * @author DuennebeilG
  *
  */
-public class InterpolationManagerDummyInterpolation implements InterpolationManagerInterface {
+public class InterpolationManagerDummyInterpolation implements InterpolationManager {
 	
 
 	Random random;
@@ -37,30 +38,31 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 	}
 	
 	
-	public void startInterpolation(String regionID, PersistenceManager pm) {
-		RegionInformation regInfo=pm.retrieveRegionInformation(regionID);
-		if (regInfo==null)
-			return;	// Shouldn't happen.
+	@Override
+	public void startInterpolation(RegionInformation regInfo, List<Observation> obs, InterpolationManager.InterpolationDoneHandler callback) {
 		
-		
-		StreetSegmentList ssl=regInfo.theList;
-		// TODO: Convey properties, too
-		StreetSegmentList interpolated=doInterpolation(ssl, null);
-		
-		pm.persistInterpolatedValues(regionID, interpolated);
+		StreetSegmentList interpolated=doInterpolation(regInfo, obs);
+
+		callback.OnInterpolationDone(regInfo, interpolated);
 	}
 	
 	
-	public StreetSegmentList doInterpolation(StreetSegmentList ssl, List<Observation> observations) 
+	public StreetSegmentList doInterpolation(RegionInformation regInfo, List<Observation> observations) 
 	{
+		
 		StreetSegmentList result=new StreetSegmentList();
 		
+		
+		StreetSegmentList ssl=regInfo.theList;
+
 		for (Entry<String, StreetSegment> entry : ssl.entrySet()) {
 			String ssID=entry.getKey();
 			StreetSegment ss=entry.getValue();
 			StreetSegment newSegment=copySS(ss);
 			
-			fillInterpolatedValues(newSegment);
+			for (Property prop : regInfo.properties) {
+				fillInterpolatedValues(prop, newSegment);
+			}
 			
 			result.put(ssID, newSegment);
 		}
@@ -68,15 +70,14 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 		return result;
 	}
 
-	private void fillInterpolatedValues(StreetSegment ss) {
+	private void fillInterpolatedValues(Property prop, StreetSegment ss) {
 		if (ss.exposure==null) {
 			ss.exposure=new HashMap<String, ObservationValue>();
 		}
 		ss.exposure.clear();
 		
 		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), null, null); 
-		ss.exposure.put("NO2", obsValue);
-		
+		ss.exposure.put(prop.getLabel(), obsValue);		
 	}
 	
 	

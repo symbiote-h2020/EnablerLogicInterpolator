@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,23 +14,26 @@ import org.mockito.Mockito;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
-import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.smeur.StreetSegmentList;
 
 public class TestReceiveNewObservations {
 	
 	
 	InterpolatorLogic il;
 	EnablerLogic elMock;
-	PersistenceManager pmMock; 
+	PersistenceManager pmMock;
+	InterpolationManager imMock;
 	
 	@Before
 	public void setUp() throws Exception {
 		il=new InterpolatorLogic();
 		elMock=mock(EnablerLogic.class);
 		pmMock=mock(PersistenceManager.class);
+		imMock=mock(InterpolationManager.class);
 		
 		il.setPersistenceManager(pmMock);
+		il.setInterpolationManager(imMock);
 		il.initialization(elMock);
 	}
 
@@ -63,6 +64,7 @@ public class TestReceiveNewObservations {
 		il.measurementReceived(eldam);
 
 		verify(pmMock, never()).persistObservations(Mockito.anyString(), Mockito.anyObject());
+		verifyZeroInteractions(imMock);
 		
 	}
 
@@ -80,10 +82,17 @@ public class TestReceiveNewObservations {
 		eldam.setTaskId("SomeID:fixed");
 		
 		observations.add(obs);
+		
+		
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.theList=new StreetSegmentList();
+		regInfo.yWantsPushing=false;
 
+		
 		// This is to control behavior:
 		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveObservations("SomeID")).thenReturn(null);
+		when(pmMock.retrieveRegionInformation("SomeID")).thenReturn(regInfo);
 		ArgumentCaptor<List> obsCapture = ArgumentCaptor.forClass(List.class);
 		ArgumentCaptor<String> idCapture = ArgumentCaptor.forClass(String.class);
 
@@ -100,6 +109,9 @@ public class TestReceiveNewObservations {
 		assertEquals(1, obsCapture.getAllValues().size());
 		List obsCaptured=obsCapture.getValue();
 		assertEquals(observations, obsCaptured);
+
+		verify(imMock, times(1)).startInterpolation(Mockito.anyObject(), Mockito.anyList(), anyObject());
+
 	}
 
 	@Test
@@ -120,25 +132,34 @@ public class TestReceiveNewObservations {
 		List<Observation> olderObservations=new ArrayList<Observation>();
 		olderObservations.add(olderObs);
 
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.theList=new StreetSegmentList();
+		
+		
 		// This is to control behavior:
 		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveObservations("SomeID")).thenReturn(olderObservations);
+		when(pmMock.retrieveRegionInformation("SomeID")).thenReturn(regInfo);
+		
 		ArgumentCaptor<List> obsCapture = ArgumentCaptor.forClass(List.class);
 		ArgumentCaptor<String> idCapture = ArgumentCaptor.forClass(String.class);
 
+		ArgumentCaptor<RegionInformation> regInfoCapture=ArgumentCaptor.forClass(RegionInformation.class);
+		ArgumentCaptor<List> observationCapture=ArgumentCaptor.forClass(List.class);
+
 		// This is what we want to achieve
 		doNothing().when(pmMock).persistObservations(idCapture.capture(), obsCapture.capture());
+		doNothing().when(imMock).startInterpolation(regInfoCapture.capture(), observationCapture.capture(), anyObject());
 		
 
 		// 3, 2, 1...fire
 		il.measurementReceived(eldam);
 		
-		
-		
-		// Verify
 		assertEquals(obsCapture.getAllValues().size(), 1);
-		List obsCaptured=obsCapture.getValue();
+		List<Observation> obsCaptured=obsCapture.getValue();
 		assertEquals(2, obsCaptured.size());
+		
+		verify(imMock, times(1)).startInterpolation(Mockito.anyObject(), Mockito.anyList(), Mockito.anyObject());
 	}
 
 	
@@ -238,4 +259,34 @@ public class TestReceiveNewObservations {
 		
 	}
 
+	
+	@Test
+	public void testOnInterpolationDone() {
+		
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.regionID="SomeID";
+		
+		StreetSegmentList ssl=new StreetSegmentList();
+		
+		// No push
+		regInfo.yWantsPushing=false;
+
+		il.OnInterpolationDone(regInfo, ssl);
+
+		verify(pmMock, times(1)).persistInterpolatedValues("SomeID", ssl);
+		verify(elMock, times(0)).sendAsyncMessageToEnablerLogic(Mockito.anyString(), Mockito.anyObject());
+
+		reset(elMock, pmMock);
+		
+		// Push
+		regInfo.yWantsPushing=true;
+		
+		
+		il.OnInterpolationDone(regInfo, ssl);
+
+		verify(pmMock, times(1)).persistInterpolatedValues("SomeID", ssl);
+		verify(elMock, times(1)).sendAsyncMessageToEnablerLogic(Mockito.anyString(), Mockito.anyObject());
+		
+	}
+	
 }

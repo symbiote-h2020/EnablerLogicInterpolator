@@ -29,6 +29,7 @@ import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
@@ -37,13 +38,13 @@ import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
 @Component
-public class InterpolatorLogic implements ProcessingLogic {
+public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.InterpolationDoneHandler {
 	private static final Logger log = LoggerFactory.getLogger(InterpolatorLogic.class);
 	
 	private EnablerLogic enablerLogic;
 
 	private PersistenceManager pm=null;
-	private InterpolationManagerInterface im=null;
+	private InterpolationManager im=null;
 
 	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
 	
@@ -59,6 +60,17 @@ public class InterpolatorLogic implements ProcessingLogic {
 		this.pm=pm;
 	}
 
+	
+	/**
+	 * This routine allows to inject an interpolation manager.
+	 * The intended usage is to inject mock objects for unit testing.
+	 * If the manager is not set here, the init phase will create a suitable default.
+	 * @param im
+	 */
+	public void setInterpolationManager(InterpolationManager im) {
+		this.im=im;
+	}
+	
 	/**
 	 * Disable cutoff.
 	 * Intended usage: unit testing.
@@ -78,7 +90,9 @@ public class InterpolatorLogic implements ProcessingLogic {
 		if (pm==null) // Might have been already injected
 			this.pm=new PersistenceManagerImpl();
 
-		this.im=new InterpolationManagerDummyInterpolation();
+		if (this.im==null)	// Only if not injected.
+			// TODO: Control this by a setting in the config file.
+			this.im=new InterpolationManagerDummyInterpolation();
 
 		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
 				RegisterRegion.class, 
@@ -127,9 +141,12 @@ public class InterpolatorLogic implements ProcessingLogic {
 		
 		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime);	// Cutoff 30 mins
 		
-		
 		this.pm.persistObservations(sslID, mergedObservations);
+
 		
+		RegionInformation regInfo=pm.retrieveRegionInformation(sslID);
+		
+		this.im.startInterpolation(regInfo, mergedObservations, this);
 				
 	}
 
@@ -242,18 +259,19 @@ public class InterpolatorLogic implements ProcessingLogic {
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
 			
 			
-			queryFixedStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
-			queryMobileStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1]);
+			queryFixedStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1], properties);
+			queryMobileStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1], properties);
 			
 			RegionInformation regInfo=new RegionInformation();
 			regInfo.regionID=regionID;
 			regInfo.theList=ssl;
+			regInfo.properties=properties;
 			
 			pm.persistRegionInformation(regionID, regInfo);
 
 			// TODO: This behavior is just for testing.
-			StreetSegmentList interpol=im.doInterpolation(ssl, null);
-			pm.persistInterpolatedValues(regionID, interpol);
+			// It will provide dummy interpolated values without having measurement values available
+			im.startInterpolation(regInfo, null, this);
 
 		} catch(Throwable t) {
 			log.error("Problems when registering a consumer:", t);
@@ -264,6 +282,66 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return result;
 	}
 	
+
+	
+	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
+		QueryInterpolatedStreetSegmentListResponse response=new QueryInterpolatedStreetSegmentListResponse();
+		String sslID=null;
+		
+		try {
+			if (request==null)
+				throw new IllegalArgumentException("The request must not be null");
+			
+			sslID=request.sslID;
+			if (sslID==null || sslID.isEmpty()) {
+				throw new IllegalArgumentException("The sslID must not be null or empty");
+			}
+			
+			// Check if the SSLID is known.
+			if (!this.pm.ySSLIdExists(sslID)) {
+				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.UNKNOWN_SSLID;
+				response.explanation="The ID "+ sslID + " is not known to the interpolator. Has it been registered?";
+				return response;
+			}
+			
+			StreetSegmentList interpol=this.pm.retrieveInterpolatedValues(sslID);
+			response.theList=interpol;
+			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.SUCCESS;
+
+			if (interpol==null) {
+				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.TRY_LATER;
+			}
+			
+			
+		} catch(Throwable t) {
+			log.error("Exception during querying interpolated values:", t);
+			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.ERROR;
+			response.explanation=t.getMessage();
+		}
+		
+		return response;
+	}
+
+	
+	
+	// Handler called if an interpolation is done
+	@Override
+	public void OnInterpolationDone(RegionInformation regInfo, StreetSegmentList interpolated) {
+
+		pm.persistInterpolatedValues(regInfo.regionID, interpolated);
+
+		if (regInfo.yWantsPushing) {
+			PushInterpolatedStreetSegmentList ipl=new PushInterpolatedStreetSegmentList();
+			ipl.regionID=regInfo.regionID;
+			ipl.theList=interpolated;
+	
+			
+			this.enablerLogic.sendAsyncMessageToEnablerLogic("EnablerLogicGreenRouteController", ipl);
+		}
+		
+	}
+
+
 	
 	
 	// Internal logic and helpers
@@ -371,7 +449,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 
 
 	
-	protected void queryFixedStations(EnablerLogic el, String consumerID, Location center, Double radius) {
+	protected void queryFixedStations(EnablerLogic el, String consumerID, Location center, Double radius, Set<Property> props) {
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
 		request.setTaskId(consumerID+":fixed");
 		request.setEnablerLogicName("interpolator");
@@ -385,7 +463,12 @@ public class InterpolatorLogic implements ProcessingLogic {
 		coreQueryRequest.setLocation_lat(center.getLatitude());
 		coreQueryRequest.setLocation_long(center.getLongitude());
 		coreQueryRequest.setMax_distance((int)(radius*1000)); // radius 10km
-		coreQueryRequest.setObserved_property(Arrays.asList("NOx"));
+
+		List<String> propsAsString=new ArrayList<String>();
+		for (Property p : props) 
+			propsAsString.add(p.getLabel());
+		coreQueryRequest.setObserved_property(propsAsString);
+
 		request.setCoreQueryRequest(coreQueryRequest);
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
 
@@ -396,7 +479,7 @@ public class InterpolatorLogic implements ProcessingLogic {
 		}
 	}
 
-	protected void queryMobileStations(EnablerLogic el, String consumerID, Location c, Double r) {
+	protected void queryMobileStations(EnablerLogic el, String consumerID, Location c, Double r, Set<Property> props) {
 		
 		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
 		request.setTaskId(consumerID+":mobile");
@@ -408,7 +491,12 @@ public class InterpolatorLogic implements ProcessingLogic {
 		coreQueryRequest.setLocation_lat(c.getLatitude());
 		coreQueryRequest.setLocation_long(c.getLongitude());
 		coreQueryRequest.setMax_distance((int)(r*1000));
-		coreQueryRequest.setObserved_property(Arrays.asList("NOx"));
+		
+		List<String> propsAsString=new ArrayList<String>();
+		for (Property p : props) 
+			propsAsString.add(p.getLabel());
+		coreQueryRequest.setObserved_property(propsAsString);
+		
 		request.setCoreQueryRequest(coreQueryRequest);
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
 
@@ -472,42 +560,5 @@ public class InterpolatorLogic implements ProcessingLogic {
 		return new Object[] {center, maxRadius};
 	}
 	
-	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
-		QueryInterpolatedStreetSegmentListResponse response=new QueryInterpolatedStreetSegmentListResponse();
-		String sslID=null;
-		
-		try {
-			if (request==null)
-				throw new IllegalArgumentException("The request must not be null");
-			
-			sslID=request.sslID;
-			if (sslID==null || sslID.isEmpty()) {
-				throw new IllegalArgumentException("The sslID must not be null or empty");
-			}
-			
-			// Check if the SSLID is known.
-			if (!this.pm.ySSLIdExists(sslID)) {
-				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.UNKNOWN_SSLID;
-				response.explanation="The ID "+ sslID + " is not known to the interpolator. Has it been registered?";
-				return response;
-			}
-			
-			StreetSegmentList interpol=this.pm.retrieveInterpolatedValues(sslID);
-			response.theList=interpol;
-			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.SUCCESS;
-
-			if (interpol==null) {
-				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.TRY_LATER;
-			}
-			
-			
-		} catch(Throwable t) {
-			log.error("Exception during querying interpolated values:", t);
-			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.ERROR;
-			response.explanation=t.getMessage();
-		}
-		
-		return response;
-	}
 
 }

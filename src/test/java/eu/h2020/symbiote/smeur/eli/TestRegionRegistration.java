@@ -138,6 +138,7 @@ public class TestRegionRegistration {
 		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
 		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
 		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
+		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property().size());
 		
 		// 3. A request for mobile resources should have been generated.
 		// TODO: How are fixed and mobile resources distinguished. 
@@ -149,6 +150,7 @@ public class TestRegionRegistration {
 		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
 		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
 		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
+		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property().size());
 		
 		
 		// 4. The region information should be stored through the Persistence Manager.
