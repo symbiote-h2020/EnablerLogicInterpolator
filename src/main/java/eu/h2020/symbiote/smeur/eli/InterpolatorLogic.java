@@ -2,7 +2,6 @@ package eu.h2020.symbiote.smeur.eli;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +28,7 @@ import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
@@ -173,56 +173,30 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				throw new IllegalArgumentException("Argument must not be null");
 			}
 
-			String regionID=qpiv.regionID;
-
-			if (regionID==null || regionID.isEmpty()) {
-				throw new IllegalArgumentException("regionID must not be null");
-			}
-
-			if (!pm.ySSLIdExists(regionID)) {
-				throw new IllegalArgumentException("regionID \""+regionID+"\" is unknown");
-			}
-
 			Map<String, Location> poiList=qpiv.thePoints;
 			if (poiList==null) {
 				throw new IllegalArgumentException("List of PoI's must not be null");
 			}
-			
-			RegionInformation regInfo=pm.retrieveRegionInformation(regionID);
-			StreetSegmentList sslList=regInfo.theList;
-			StreetSegmentList interpol=pm.retrieveInterpolatedValues(regionID);
-			if (interpol==null) {
-				throw new NoInterpolationYetException("no interpolated values available");
-			}
-			
-			result.theData=new HashMap<String, Map<String, ObservationValue>>();
-			
-			for (Entry<String, Location> entry : poiList.entrySet()) {
-				String pointID=entry.getKey();
-				
-				Map<String, ObservationValue> exposures=new HashMap<String, ObservationValue>();
-				
-				Location l=entry.getValue();
-				String nearestSegmentID=findNearestSegment(l, sslList);
-				
-				StreetSegment nearestSS=interpol.get(nearestSegmentID);
-				if (nearestSS==null) {
-					throw new IllegalStateException("Internal error: No interpolated segment found");
-				}
-				ObservationValue exposure=nearestSS.exposure.get("NO");
-				exposures.put("NO", exposure);
-				
-				result.theData.put(pointID, exposures);
 
+
+			result.theData=new HashMap<String, PoIInformation>();
+
+			// TODO: This algorithm makes exhaustive use of the database.
+			// Maybe a small cache can speed up things tremendously by potentially reading the same region again and again.
+			// This depends on how good caching already is for mongoDB.
+			for (Entry<String, Location> entry : poiList.entrySet()) {
+				
+				String poiID=entry.getKey();
+				Location poiLocation=entry.getValue();
+				
+				PoIInformation poii=queryPoiValuesForOnePoI(poiID, poiLocation);
+				
+				result.theData.put(poiID, poii);
 			}
 
 			
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.OK;
-			
-		// 3. For each point in the query:
-		// 4.    Find the nearest segment for the point in the ssl
-		// 5.    Find the same segment in the interpolated values
-		// 6.    copy all pollutants (which are requested) to the result 
+
 
 		} catch (NoInterpolationYetException e) {
 			e.printStackTrace();
@@ -237,6 +211,57 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 	
+	private PoIInformation queryPoiValuesForOnePoI(String pointID, Location poiLocation) {
+
+		PoIInformation result=new PoIInformation();
+		
+		Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
+		
+		RegionInformation regInfo=null;
+		for (String regID : allRegionIDs) {
+			RegionInformation ri=pm.retrieveRegionInformation(regID);
+			double poiDistance=distance(ri.center, poiLocation);
+			if (poiDistance<=ri.radius) {
+				regInfo=ri;
+				break;
+			}			
+		}
+		
+		if (regInfo==null) {	// Still no region? --> no suitable region available.
+			result.errorReason="No suitable region found";
+			return result;
+		}
+
+		result.regionID=regInfo.regionID;
+		
+		StreetSegmentList sslList=regInfo.theList;
+		StreetSegmentList interpol=pm.retrieveInterpolatedValues(regInfo.regionID);
+		if (interpol==null) {
+			result.errorReason="No interpolated values available for region";
+			return result;			
+		}
+
+		
+		result.poiID=pointID;
+			
+		Map<String, ObservationValue> exposures=new HashMap<String, ObservationValue>();
+			
+		String nearestSegmentID=findNearestSegment(poiLocation, sslList);
+			
+		StreetSegment nearestSS=interpol.get(nearestSegmentID);
+		if (nearestSS==null) {
+			// TODO: Set error information here once the field is reachable			result.
+			return result;			
+		}
+			
+		result.theSegment=nearestSS;
+		result.interpolatedValues=nearestSS.exposure;
+
+		
+		return result;
+	}
+
+
 	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
 		
 		RegisterRegionResponse result=new RegisterRegionResponse();
@@ -257,15 +282,19 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			
 			
 			Object[] c_and_r=calculateCenterAndRadius(ssl);
+			Location center=(Location)c_and_r[0];
+			Double radius=(Double)c_and_r[1];
 			
 			
-			queryFixedStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1], properties);
-			queryMobileStations(enablerLogic, regionID, (Location)c_and_r[0], (Double)c_and_r[1], properties);
+			queryFixedStations(enablerLogic, regionID, center, radius, properties);
+			queryMobileStations(enablerLogic, regionID, center, radius, properties);
 			
 			RegionInformation regInfo=new RegionInformation();
 			regInfo.regionID=regionID;
 			regInfo.theList=ssl;
 			regInfo.properties=properties;
+			regInfo.center=center;
+			regInfo.radius=radius;
 			
 			pm.persistRegionInformation(regionID, regInfo);
 

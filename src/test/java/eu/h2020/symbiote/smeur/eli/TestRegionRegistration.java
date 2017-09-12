@@ -158,6 +158,11 @@ public class TestRegionRegistration {
 		
 		List<String> capturedIDs=idCapture.getAllValues();
 		assertEquals("SomeID", capturedIDs.get(0));
-		assertEquals(ric.streetSegments, riCapture.getAllValues().get(0).theList);
+		
+		RegionInformation regInfoCaptured=riCapture.getAllValues().get(0);
+		assertEquals(ric.streetSegments, regInfoCaptured.theList);
+		assertEquals(request.getCoreQueryRequest().getLocation_long(), regInfoCaptured.center.getLongitude(), 1E-3);
+		assertEquals(request.getCoreQueryRequest().getLocation_lat(),  regInfoCaptured.center.getLatitude(), 1E-3);
+		assertEquals(request.getCoreQueryRequest().getMax_distance(),  (int)(regInfoCaptured.radius*1000), 1E-3);
 	}
 }

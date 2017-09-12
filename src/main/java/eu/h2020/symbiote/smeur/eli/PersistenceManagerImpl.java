@@ -16,7 +16,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoCredential;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -120,6 +120,21 @@ public class PersistenceManagerImpl implements PersistenceManager {
 		return n==1;
 	}
 
+	
+	@Override
+	public Set<String> getAllRegionIDs() {
+		HashSet<String> result=new HashSet<String>();
+		
+		DistinctIterable<String> allIDs=collSSL.distinct("_id", String.class);
+
+		for (String id : allIDs) {
+			result.add(id);
+		}
+		return result;
+	}
+	
+	
+	
 	
 	// Deal with interpolated values.
 	@SuppressWarnings("unused")

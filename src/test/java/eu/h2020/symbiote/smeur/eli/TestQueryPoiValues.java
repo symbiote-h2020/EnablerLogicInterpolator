@@ -3,7 +3,9 @@ package eu.h2020.symbiote.smeur.eli;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.junit.After;
@@ -15,6 +17,7 @@ import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
 
@@ -55,19 +58,7 @@ public class TestQueryPoiValues {
 		assertNotNull(qpoir.explanation);
 		verifyZeroInteractions(elMock);
 		
-		qpoir=il.queryPoiValues(qpoi);	// StreetSegmentID is null --> fail
-		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.ERROR, qpoir.status);
-		assertNotNull(qpoir.explanation);
-		verifyZeroInteractions(elMock);
-
-		qpoi.regionID="";
-		qpoir=il.queryPoiValues(qpoi);	// StreetSegmentID is empty --> fail
-		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.ERROR, qpoir.status);
-		assertNotNull(qpoir.explanation);
-		verifyZeroInteractions(elMock);
-		
 		// Ok, ok, this is still sort of grey box testing. the sequence of the tests is in accordance with the internal sequence of error checks. 
-		qpoi.regionID="someID";
 		qpoir=il.queryPoiValues(qpoi);	// PoI list is null
 		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.ERROR, qpoir.status);
 		assertNotNull(qpoir.explanation);
@@ -76,51 +67,74 @@ public class TestQueryPoiValues {
 	}
 
 	/**
-	 * Test behavior region not known.
+	 * Test behavior no fitting region.
 	 */
 	@Test
-	public void testRegionNotKnown() {
+	public void testNoSuitableRegion() {
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.regionID="someID";
+		qpoi.thePoints=new HashMap<String, Location>();
+		qpoi.thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
+
+		RegionInformation regInfo=new RegionInformation();
+		regInfo.center=new Location(10.0, 10.0, 0.0, null, null);
+		regInfo.radius=20.0;
 		
-		when(pmMock.ySSLIdExists("someID")).thenReturn(false);
+		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"Reg1"})));
+		when(pmMock.retrieveRegionInformation("Reg1")).thenReturn(regInfo);
 		
+		// This is where the shit hits the fan....
 		qpoir=il.queryPoiValues(qpoi);
 
-		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.ERROR, qpoir.status);
-		assertNotNull(qpoir.explanation);
+		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.OK, qpoir.status);
+		assertNull(qpoir.explanation);
+		assertNotNull(qpoir.theData);
+		
+		PoIInformation poii=qpoir.theData.get("SomePoint");
+		assertNotNull(poii);
+		assertNotNull(poii.errorReason);
+		
 		verifyZeroInteractions(elMock);
 
 	}
 
 	/**
-	 * Test behavior region not known.
+	 * Test behavior no interpolated values.
 	 */
 	@Test
 	public void testNoInterpolatedValues() {
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.regionID="someID";
 		qpoi.thePoints=new HashMap<String, Location>();
-		qpoi.thePoints.put("PointID", new Location(11,11, 0.0, null, null));
+		qpoi.thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
 
-		StreetSegmentList ssl=new StreetSegmentList();		// Maybe empty. We don't use the content in this text
-		
 		RegionInformation regInfo=new RegionInformation();
-		regInfo.theList=ssl;
+		regInfo.regionID="region";
+		regInfo.center=new Location(19.9, 19.9, 0.0, null, null);
+		regInfo.radius=20.0;
 		
-		when(pmMock.ySSLIdExists("someID")).thenReturn(true);
-		when(pmMock.retrieveRegionInformation("someID")).thenReturn(regInfo);
-		when(pmMock.retrieveInterpolatedValues("someID")).thenReturn(null);
+		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"Reg1"})));
+		when(pmMock.retrieveRegionInformation("Reg1")).thenReturn(regInfo);
+		when(pmMock.retrieveInterpolatedValues("Reg1")).thenReturn(null);
 		
+		// Here is the call
 		qpoir=il.queryPoiValues(qpoi);
 
-		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.TRY_AGAIN, qpoir.status);
-		assertNotNull(qpoir.explanation);
+		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.OK, qpoir.status);
+		assertNull(qpoir.explanation);
+		assertNotNull(qpoir.theData);
+		
+		PoIInformation poii=qpoir.theData.get("SomePoint");
+		assertNotNull(poii);
+		assertEquals("region", poii.regionID);
+		assertNull(poii.interpolatedValues);
+		assertNotNull(poii.errorReason);
+		
+		
 		verifyZeroInteractions(elMock);
+
 	}
 
 	
@@ -132,12 +146,10 @@ public class TestQueryPoiValues {
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.regionID="someID";
-		qpoi.regionID="someID";
 		qpoi.thePoints=new HashMap<String, Location>();
-		qpoi.thePoints.put("PointID", new Location(11,11, 0.0, null, null));
+		qpoi.thePoints.put("PointID", new Location(9.9, 10.0, 0.0, null, null));
 
-		StreetSegmentList ssl=new StreetSegmentList();		// Maybe empty. We don't use the content in this text
+		StreetSegmentList ssl=new StreetSegmentList();
 		StreetSegment ss=new StreetSegment();
 
 		ss.id="Who cares";
@@ -149,22 +161,36 @@ public class TestQueryPoiValues {
 		
 		
 		RegionInformation regInfo=new RegionInformation();
+		regInfo.regionID="region";
+		regInfo.center=new Location(9.9, 9.9, 0.0, null, null);
+		regInfo.radius=20.0;
 		regInfo.theList=ssl;
 		
-		when(pmMock.ySSLIdExists("someID")).thenReturn(true);
-		when(pmMock.retrieveRegionInformation("someID")).thenReturn(regInfo);
-		when(pmMock.retrieveInterpolatedValues("someID")).thenReturn(ssl);
+		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"region"})));
+		when(pmMock.retrieveRegionInformation("region")).thenReturn(regInfo);
+		when(pmMock.retrieveInterpolatedValues("region")).thenReturn(ssl);
 		
+		
+		
+		// Fire away.
 		qpoir=il.queryPoiValues(qpoi);
 
+		
+		// Result is as expected?
 		assertEquals(QueryPoiInterpolatedValuesResponse.StatusCode.OK, qpoir.status);
-		Map<String, Map<String, ObservationValue>> theData=qpoir.theData;
+		Map<String, PoIInformation> theData=qpoir.theData;
 		assertNotNull(theData);
 		
 		assertEquals(1, theData.size());				// We queried one PoI, so the result should be 1
 		assertTrue(theData.containsKey("PointID"));		// We queried it, so it should be there
+
+		PoIInformation poii=theData.get("PointID");
 		
-		Map<String, ObservationValue> exposures=theData.get("PointID");
+		assertEquals("PointID", poii.poiID);
+		assertNull(poii.errorReason);
+		assertEquals("region", poii.regionID);
+		
+		Map<String, ObservationValue> exposures=poii.interpolatedValues;
 		
 		assertNotNull(exposures);
 		assertEquals(1, exposures.size());				// Must change when the query defines the pollutants

@@ -2,6 +2,7 @@ package eu.h2020.symbiote.smeur.eli;
 
 
 import java.util.List;
+import java.util.Set;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
@@ -39,6 +40,10 @@ public interface PersistenceManager {
 	public boolean ySSLIdExists(String sslID);
 
 	
+	/**
+	 * Get all RegionIDs available.
+	 */
+	Set<String> getAllRegionIDs();
 	
 	// Deal with interpolated values here (output data)
 	
