@@ -110,7 +110,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
 
 	@Override
-	public boolean ySSLIdExists(String sslID) {
+	public boolean yRegionExists(String sslID) {
 		Bson filter=Filters.eq(sslID);
 		
 		long n=collSSL.count(filter);

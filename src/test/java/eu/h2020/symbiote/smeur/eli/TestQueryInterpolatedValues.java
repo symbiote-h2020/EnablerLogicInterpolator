@@ -82,7 +82,7 @@ public class TestQueryInterpolatedValues {
 		// 4. Give error back --> not existing
 
 		// Expect...
-		when(pmMock.ySSLIdExists("SomeID")).thenReturn(false);
+		when(pmMock.yRegionExists("SomeID")).thenReturn(false);
 		
 		// Here's the testee call!!!
 		qilr=il.queryInterpolatedData(qil);
@@ -113,7 +113,7 @@ public class TestQueryInterpolatedValues {
 		// 4. Give error back --> not existing
 
 		// Expect...
-		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
+		when(pmMock.yRegionExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveInterpolatedValues("SomeID")).thenReturn(null);
 		
 		// Here's the testee call!!!
@@ -146,7 +146,7 @@ public class TestQueryInterpolatedValues {
 		// 4. Give error back --> not existing
 
 		// Expect...
-		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
+		when(pmMock.yRegionExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveInterpolatedValues("SomeID")).thenReturn(new StreetSegmentList());
 		
 		// Here's the testee call!!!

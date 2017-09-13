@@ -35,9 +35,9 @@ public interface PersistenceManager {
 	RegionInformation retrieveRegionInformation(String sslID);
 	
 	/**
-	 * Find out whether a certain sslID exists.
+	 * Find out whether a certain region exists.
 	 */
-	public boolean ySSLIdExists(String sslID);
+	public boolean yRegionExists(String sslID);
 
 	
 	/**

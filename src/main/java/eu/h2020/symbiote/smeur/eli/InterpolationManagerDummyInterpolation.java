@@ -23,6 +23,11 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 	Random random;
 	
 	
+	@Override
+	public void init() {
+		
+	}
+	
 	InterpolationManagerDummyInterpolation() {
 		random=new Random();
 	}
@@ -80,19 +85,4 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 		ss.exposure.put(prop.getLabel(), obsValue);		
 	}
 	
-	
-//	class InterpolationWorker implements Callable<StreetSegmentList> {
-//
-//		private StreetSegmentList ssl;
-//
-//		public InterpolationWorker(StreetSegmentList ssl) {
-//			this.ssl=ssl;
-//		}
-//		
-//		@Override
-//		public StreetSegmentList call() throws Exception {
-//			return InterpolationManagerDummyInterpolation.this.doInterpolation(ssl, null);
-//		}
-//		
-//	}
 }

@@ -59,7 +59,7 @@ public class TestReceiveNewObservations {
 		reset(pmMock);
 		// unknown ID
 		eldam.setTaskId("This_has:a_colon");
-		when(pmMock.ySSLIdExists("This_has")).thenReturn(false);
+		when(pmMock.yRegionExists("This_has")).thenReturn(false);
 		
 		il.measurementReceived(eldam);
 
@@ -90,7 +90,7 @@ public class TestReceiveNewObservations {
 
 		
 		// This is to control behavior:
-		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
+		when(pmMock.yRegionExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveObservations("SomeID")).thenReturn(null);
 		when(pmMock.retrieveRegionInformation("SomeID")).thenReturn(regInfo);
 		ArgumentCaptor<List> obsCapture = ArgumentCaptor.forClass(List.class);
@@ -137,7 +137,7 @@ public class TestReceiveNewObservations {
 		
 		
 		// This is to control behavior:
-		when(pmMock.ySSLIdExists("SomeID")).thenReturn(true);
+		when(pmMock.yRegionExists("SomeID")).thenReturn(true);
 		when(pmMock.retrieveObservations("SomeID")).thenReturn(olderObservations);
 		when(pmMock.retrieveRegionInformation("SomeID")).thenReturn(regInfo);
 		

@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -41,12 +42,15 @@ public class TestPersistenceFunctions {
 	}
 	
 	@Test
-	public void testSSLPersistance() {
+	public void testRegionPersistance() {
 
 		
-		boolean yExists=pm.ySSLIdExists("some id");
+		boolean yExists=pm.yRegionExists("some id");
 		assertFalse(yExists);
 
+		Set<String> allIDs=pm.getAllRegionIDs();
+		assertNotNull(allIDs);
+		assertTrue(allIDs.isEmpty());
 
 		
 		// Empty streetSegementList
@@ -61,8 +65,13 @@ public class TestPersistenceFunctions {
 		assertEquals(regInfo, regInfoReadBack);
 
 		
-		yExists=pm.ySSLIdExists("some id");
+		yExists=pm.yRegionExists("some id");
 		assertTrue(yExists);
+
+		allIDs=pm.getAllRegionIDs();
+		assertNotNull(allIDs);
+		assertEquals(1, allIDs.size());
+		assertTrue(allIDs.contains("some id"));
 
 
 		// Empty segment

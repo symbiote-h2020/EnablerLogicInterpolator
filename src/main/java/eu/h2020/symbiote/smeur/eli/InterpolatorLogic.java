@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
@@ -65,6 +64,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	 * This routine allows to inject an interpolation manager.
 	 * The intended usage is to inject mock objects for unit testing.
 	 * If the manager is not set here, the init phase will create a suitable default.
+	 * Note, that init will not be called on an injected interploation manager. 
 	 * @param im
 	 */
 	public void setInterpolationManager(InterpolationManager im) {
@@ -87,12 +87,20 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	public void initialization(EnablerLogic enablerLogic) {
 		this.enablerLogic = enablerLogic;
 
+		
+		log.info("***************************************************************************");
+		log.info("**  Enabler logic Interpolator coming up              *********************");
+		log.info("***************************************************************************");
+		
+		
 		if (pm==null) // Might have been already injected
 			this.pm=new PersistenceManagerImpl();
 
-		if (this.im==null)	// Only if not injected.
-			// TODO: Control this by a setting in the config file.
+		if (this.im==null) {	// Only if not injected.
+			// TODO: Control the type created here by a setting in the config file.
 			this.im=new InterpolationManagerDummyInterpolation();
+			this.im.init();
+		}
 
 		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
 				RegisterRegion.class, 
@@ -126,7 +134,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		String sslID=taskID.substring(0, colonIndex);
 
-		boolean knownID=pm.ySSLIdExists(sslID);
+		boolean knownID=pm.yRegionExists(sslID);
 		if (!knownID)
 			return;
 		
@@ -211,58 +219,11 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 	
-	private PoIInformation queryPoiValuesForOnePoI(String pointID, Location poiLocation) {
-
-		PoIInformation result=new PoIInformation();
-		
-		Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
-		
-		RegionInformation regInfo=null;
-		for (String regID : allRegionIDs) {
-			RegionInformation ri=pm.retrieveRegionInformation(regID);
-			double poiDistance=distance(ri.center, poiLocation);
-			if (poiDistance<=ri.radius) {
-				regInfo=ri;
-				break;
-			}			
-		}
-		
-		if (regInfo==null) {	// Still no region? --> no suitable region available.
-			result.errorReason="No suitable region found";
-			return result;
-		}
-
-		result.regionID=regInfo.regionID;
-		
-		StreetSegmentList sslList=regInfo.theList;
-		StreetSegmentList interpol=pm.retrieveInterpolatedValues(regInfo.regionID);
-		if (interpol==null) {
-			result.errorReason="No interpolated values available for region";
-			return result;			
-		}
-
-		
-		result.poiID=pointID;
-			
-		Map<String, ObservationValue> exposures=new HashMap<String, ObservationValue>();
-			
-		String nearestSegmentID=findNearestSegment(poiLocation, sslList);
-			
-		StreetSegment nearestSS=interpol.get(nearestSegmentID);
-		if (nearestSS==null) {
-			// TODO: Set error information here once the field is reachable			result.
-			return result;			
-		}
-			
-		result.theSegment=nearestSS;
-		result.interpolatedValues=nearestSS.exposure;
-
-		
-		return result;
-	}
-
 
 	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
+
+		log.debug("Received a registerRegion message");
+		log.debug("Message is : {}", ric);
 		
 		RegisterRegionResponse result=new RegisterRegionResponse();
 		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
@@ -327,7 +288,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			}
 			
 			// Check if the SSLID is known.
-			if (!this.pm.ySSLIdExists(sslID)) {
+			if (!this.pm.yRegionExists(sslID)) {
 				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.UNKNOWN_SSLID;
 				response.explanation="The ID "+ sslID + " is not known to the interpolator. Has it been registered?";
 				return response;
@@ -590,4 +551,53 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 	
 
+	private PoIInformation queryPoiValuesForOnePoI(String pointID, Location poiLocation) {
+
+		PoIInformation result=new PoIInformation();
+		
+		Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
+		
+		RegionInformation regInfo=null;
+		for (String regID : allRegionIDs) {
+			RegionInformation ri=pm.retrieveRegionInformation(regID);
+			double poiDistance=distance(ri.center, poiLocation);
+			if (poiDistance<=ri.radius) {
+				regInfo=ri;
+				break;
+			}			
+		}
+		
+		if (regInfo==null) {	// Still no region? --> no suitable region available.
+			result.errorReason="No suitable region found";
+			return result;
+		}
+
+		result.regionID=regInfo.regionID;
+		
+		StreetSegmentList sslList=regInfo.theList;
+		StreetSegmentList interpol=pm.retrieveInterpolatedValues(regInfo.regionID);
+		if (interpol==null) {
+			result.errorReason="No interpolated values available for region";
+			return result;			
+		}
+
+		
+		result.poiID=pointID;
+			
+		String nearestSegmentID=findNearestSegment(poiLocation, sslList);
+			
+		StreetSegment nearestSS=interpol.get(nearestSegmentID);
+		if (nearestSS==null) {
+			result.errorReason="Internal error. A segment was in the ssl but not in the interpolated values.";
+			return result;			
+		}
+			
+		result.theSegment=nearestSS;
+		result.interpolatedValues=nearestSS.exposure;
+
+		
+		return result;
+	}
+
+	
 }
