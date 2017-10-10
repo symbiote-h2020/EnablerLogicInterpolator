@@ -119,7 +119,7 @@ public class TestEnablerLogicConnection {
 	@Test
 	public void testQueryPoiValues() throws JsonProcessingException, UnsupportedEncodingException {
 
-		QueryPoiInterpolatedValues qil=new QueryPoiInterpolatedValues(null);
+		QueryPoiInterpolatedValues qil=new QueryPoiInterpolatedValues();
 
 		Message msg=encodeObject(qil);
 		

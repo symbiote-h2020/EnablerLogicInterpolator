@@ -79,6 +79,10 @@ public class TestExternalInterpolation {
 	@After
 	public void afterTest() throws IOException {
 
+		try {
+			Thread.sleep(1000); // No idea why this is needed but it makes the test more stable
+		} catch (InterruptedException e) {
+		}	
 		IOFileFilter ageFilter=FileFilterUtils.ageFileFilter(new Date());
 		Collection<File> allOldFiles=FileUtils.listFilesAndDirs(workingDirBase, ageFilter, ageFilter);
 		for (File f : allOldFiles) {

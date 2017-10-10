@@ -139,7 +139,7 @@ public class InterpolationRunner implements Runnable {
 
 		File interpolatedFile=new File(workingDir, "output.json");	// TODO: Shouldn't be hard coded
 		
-		FileInputStream fis;
+		FileInputStream fis=null;
 		try {
 			fis = new FileInputStream(interpolatedFile);
 			byte[] bContent=IOUtils.toByteArray(fis);
@@ -164,11 +164,16 @@ public class InterpolationRunner implements Runnable {
 	        
 	        System.out.println(interpolatedRaw);
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			try {
+				if (fis!=null)
+					fis.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		
 
