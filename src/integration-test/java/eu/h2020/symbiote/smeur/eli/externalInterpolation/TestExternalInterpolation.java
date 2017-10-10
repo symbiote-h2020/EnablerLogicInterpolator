@@ -5,12 +5,16 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Location;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
+import eu.h2020.symbiote.cloud.model.data.observation.Property;
+import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
@@ -27,8 +31,12 @@ import org.junit.rules.TestName;
 public class TestExternalInterpolation {
 
 	static final File workingDirBase=new File("InterpolatorWorkingDir");	// TODO: Not hardcoded. Set from the config file.
-	static final File resourceDir=new File("src/integration-test/resources/eu.h2020.symbiote.smeur.eli.externalInterpolation/testExternalInterpolation");
+	static final File resourceDir=new File("src/integration-test/resources/eu/h2020/symbiote/smeur/eli/externalInterpolation/testExternalInterpolation");
 
+	
+	
+	RegionInformation regInfo;
+	List<Observation> obs;
 	
 	@Rule public TestName testName=new TestName();
 	
@@ -40,6 +48,31 @@ public class TestExternalInterpolation {
 		if (testResource.exists()) {
 			FileUtils.copyDirectory(testResource, workingDirBase);
 		}
+		
+
+		
+		StreetSegmentList ssl=new StreetSegmentList();
+		StreetSegment s1=new StreetSegment();
+		
+		s1.id="s1";
+		s1.segmentData=new Location[] {new Location(1.0, 1.0, 0.0, null, null)};
+		s1.comment="Weg1";
+		ssl.put("s1", s1);
+		
+		
+		regInfo=new RegionInformation();
+		regInfo.regionID="testRegion";
+		regInfo.theList=ssl;
+
+		ObservationValue ob1V1=new ObservationValue("3.14", new Property("NO", null), new UnitOfMeasurement("ppm", "ppm", "no comment"));
+		ObservationValue[] values=new ObservationValue[] {ob1V1};
+		
+		Observation ob1=new Observation("Sensor1", new Location(1.1, 1.1, 0.0, null, null), "T1", "T2", Arrays.asList(values));
+		
+		obs=new ArrayList<Observation>();
+		obs.add(ob1);
+
+		
 		
 	}
 	
@@ -64,20 +97,6 @@ public class TestExternalInterpolation {
 	public void testPrepareCall() {
 		InterpolationRunner im = new InterpolationRunner(null);
 		
-		StreetSegmentList ssl=new StreetSegmentList();
-		StreetSegment s1=new StreetSegment();
-		
-		s1.id="s1";
-		s1.segmentData=new Location[] {new Location(1.0, 1.0, 0.0, null, null)};
-		s1.comment="Weg1";
-		ssl.put("s1", s1);
-		
-		
-		RegionInformation regInfo=new RegionInformation();
-		regInfo.regionID="testRegion";
-		regInfo.theList=ssl;
-		
-		List<Observation> obs=new ArrayList<Observation>();
 		
 		Date dirDate=new Date(0);
 		
@@ -120,7 +139,7 @@ public class TestExternalInterpolation {
 		
 		InterpolationRunner im = new InterpolationRunner(null);
 		
-		im.retrieveResults(workingDir);
+		im.retrieveResults(regInfo, workingDir);
 		
 		// TODO: Do some meaningful testing here. We will do that once we are more aware of how the output will look
 	}

@@ -1,4 +1,4 @@
-package eu.h2020.symbiote.smeur.eli;
+package eu.h2020.symbiote.smeur.eli.persistance;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -10,6 +10,8 @@ import java.util.Set;
 
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,9 +28,12 @@ import com.mongodb.client.model.UpdateOptions;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.RegionInformation;
 
-public class PersistenceManagerImpl implements PersistenceManager {
+public class PersistenceManagerMongo implements PersistenceManager {
 
+	private static final Logger log = LoggerFactory.getLogger(PersistenceManagerMongo.class);
+	
 	String databaseName="symbiote_eli_database";	// Note: Not final on purpose
 	
 	static final String sslCollectionName="StreetSegmentLists";
@@ -59,16 +64,22 @@ public class PersistenceManagerImpl implements PersistenceManager {
 			allCollections.add(name);
 		}
 
-		if (!allCollections.contains(sslCollectionName))
-			database.createCollection(sslCollectionName);
-		collSSL=database.getCollection(sslCollectionName);
+		log.info("Existing collections are: "+allCollections);
 		
-		if (!allCollections.contains(interpolCollectionName))
+		if (!allCollections.contains(sslCollectionName)) {
+			database.createCollection(sslCollectionName);
+		}
+		collSSL=database.getCollection(sslCollectionName);
+		log.trace("Collection for SSL created as "+collSSL);
+		
+		if (!allCollections.contains(interpolCollectionName)) {
 			database.createCollection(interpolCollectionName);
+		}
 		collInterpol=database.getCollection(interpolCollectionName);
 		
-		if (!allCollections.contains(observationCollectionName))
+		if (!allCollections.contains(observationCollectionName)) {
 			database.createCollection(observationCollectionName);
+		}
 		collObservations=database.getCollection(observationCollectionName);
 		
 		

@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
 

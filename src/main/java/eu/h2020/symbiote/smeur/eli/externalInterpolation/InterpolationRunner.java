@@ -1,28 +1,38 @@
 package eu.h2020.symbiote.smeur.eli.externalInterpolation;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
+import eu.h2020.symbiote.cloud.model.data.observation.Property;
+import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
+import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.InterpolatorLogic;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
@@ -62,7 +72,7 @@ public class InterpolationRunner implements Runnable {
 			try {
 				job=jobQueue.take();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				// Dead code. Shouldn't happen unless we change the complete concept
 				e.printStackTrace();
 			}
 			
@@ -74,7 +84,7 @@ public class InterpolationRunner implements Runnable {
 			File theExecutable=new File(workingDirBase, "fakeInterpolation.py");
 			
 			runInterpolator(theExecutable, workingDir);
-			StreetSegmentList interpolated=retrieveResults(workingDir);
+			StreetSegmentList interpolated=retrieveResults(job.regInfo, workingDir);
 			
 			job.callback.OnInterpolationDone(job.regInfo, interpolated);
 			
@@ -99,10 +109,69 @@ public class InterpolationRunner implements Runnable {
 		
 	}
 
+
+	// OMG, is this code ugly (with all these inferred types)
+	HashMap<String, HashMap<String, ObservationValue>> rawInterpolatedToObservations(HashMap<String,HashMap<String,ArrayList<Object>>> interpolatedRaw) {
+		HashMap<String, HashMap<String, ObservationValue>> result=new HashMap<String, HashMap<String, ObservationValue>>();
+		
+		for (Entry<String, HashMap<String, ArrayList<Object>>> entry : interpolatedRaw.entrySet()) {
+			String segmentID=entry.getKey();
+			HashMap<String, ArrayList<Object>> values=entry.getValue();
+			for (Entry<String, ArrayList<Object>> e2 : values.entrySet()) {
+				String propCode=e2.getKey();
+				ArrayList<?> valuePair=e2.getValue();
+				Double value=(Double) valuePair.get(0);
+				String uom=(String) valuePair.get(1);
+				ObservationValue obsValue=new ObservationValue(value.toString(), new Property(propCode, null), new UnitOfMeasurement(uom, null, null));
+				if (! result.containsKey(segmentID)) {
+					result.put(segmentID, new HashMap<String, ObservationValue>());
+				}
+				result.get(segmentID).put(propCode, obsValue);
+			}
+		}
+		
+		return result;
+	}
 	
-	StreetSegmentList retrieveResults(File workingDir) {
+	
+	StreetSegmentList retrieveResults(RegionInformation regInfo, File workingDir) {
 		StreetSegmentList interpolated=new StreetSegmentList();
-		// TODO: Fill with something reasonable.
+
+		File interpolatedFile=new File(workingDir, "output.json");	// TODO: Shouldn't be hard coded
+		
+		FileInputStream fis;
+		try {
+			fis = new FileInputStream(interpolatedFile);
+			byte[] bContent=IOUtils.toByteArray(fis);
+			String sContent=new String(bContent);	// Platform dependent on purpose!!
+
+	        ObjectMapper mapper = new ObjectMapper();
+	        HashMap<String, HashMap<String, ArrayList<Object>>> interpolatedRaw=null;
+	        interpolatedRaw=mapper.readValue(sContent, new TypeReference<HashMap<String, Object>>(){});
+	        
+	        HashMap<String, HashMap<String, ObservationValue>> interpolatedObservations=rawInterpolatedToObservations(interpolatedRaw);
+	        
+	        for (Entry<String, StreetSegment> entry : regInfo.theList.entrySet()) {
+	        	String ssID=entry.getKey();
+	        	StreetSegment ss=entry.getValue();
+	        	StreetSegment ssCopy=new StreetSegment();
+	        	ssCopy.id=ss.id;
+	        	ssCopy.comment=ss.comment;
+	        	ss.exposure=interpolatedObservations.get(ssID);
+	        	
+	        	interpolated.put(ssID, ssCopy);
+	        }
+	        
+	        System.out.println(interpolatedRaw);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+
 		return interpolated;
 	}
 
@@ -166,11 +235,14 @@ public class InterpolationRunner implements Runnable {
 		
 		boolean yOk=workingDir.mkdir();
 		
+		ReducedStreetSegmentList reducedList=new ReducedStreetSegmentList();
+		reducedList.addAll(regInfo.theList);
+		
 		ObjectMapper mapper = new ObjectMapper();
         String json=null;
 
 		try {
-			json = mapper.writeValueAsString(regInfo.theList);
+			json = mapper.writeValueAsString(reducedList);
 		} catch (JsonProcessingException e) {
 			// Any problem here can only be due to coding problems (aka "developer too stupid error")
 			// So we just trace the problem.

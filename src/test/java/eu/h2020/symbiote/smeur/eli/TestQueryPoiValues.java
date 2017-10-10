@@ -17,6 +17,7 @@ import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
@@ -49,7 +50,7 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testErrorBehavior() {
-		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
+		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(null);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
 		qpoir=il.queryPoiValues(null);// argument is null --> fail
@@ -71,12 +72,12 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testNoSuitableRegion() {
-		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
+		HashMap<String, Location> thePoints=new HashMap<String, Location>();
+		thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
+
+		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.thePoints=new HashMap<String, Location>();
-		qpoi.thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
-
 		RegionInformation regInfo=new RegionInformation();
 		regInfo.center=new Location(10.0, 10.0, 0.0, null, null);
 		regInfo.radius=20.0;
@@ -104,12 +105,13 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testNoInterpolatedValues() {
-		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
+		
+		HashMap<String, Location> thePoints = new HashMap<String, Location>();
+		thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
+		
+		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.thePoints=new HashMap<String, Location>();
-		qpoi.thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
-
 		RegionInformation regInfo=new RegionInformation();
 		regInfo.regionID="region";
 		regInfo.center=new Location(19.9, 19.9, 0.0, null, null);
@@ -143,12 +145,12 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testNormal() {
-		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues();
+		HashMap<String, Location> thePoints = new HashMap<String, Location>();
+		thePoints.put("PointID", new Location(9.9, 10.0, 0.0, null, null));
+
+		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
-		qpoi.thePoints=new HashMap<String, Location>();
-		qpoi.thePoints.put("PointID", new Location(9.9, 10.0, 0.0, null, null));
-
 		StreetSegmentList ssl=new StreetSegmentList();
 		StreetSegment ss=new StreetSegment();
 

@@ -1,4 +1,4 @@
-package eu.h2020.symbiote.smeur.eli;
+package eu.h2020.symbiote.smeur.eli.persistance;
 
 
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.Set;
 
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.RegionInformation;
 
 /**
  * This defines the interface between ELI and MongoDB (or whatever we will implement in the future).

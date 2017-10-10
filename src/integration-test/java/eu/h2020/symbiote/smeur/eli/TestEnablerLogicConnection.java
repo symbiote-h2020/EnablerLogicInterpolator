@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.messaging.consumers.SyncMessageFromEnablerLogicConsumer;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentListResponse;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
@@ -118,7 +119,7 @@ public class TestEnablerLogicConnection {
 	@Test
 	public void testQueryPoiValues() throws JsonProcessingException, UnsupportedEncodingException {
 
-		QueryPoiInterpolatedValues qil=new QueryPoiInterpolatedValues();
+		QueryPoiInterpolatedValues qil=new QueryPoiInterpolatedValues(null);
 
 		Message msg=encodeObject(qil);
 		

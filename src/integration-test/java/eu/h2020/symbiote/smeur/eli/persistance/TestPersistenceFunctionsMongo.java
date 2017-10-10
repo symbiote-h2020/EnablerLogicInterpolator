@@ -1,4 +1,4 @@
-package eu.h2020.symbiote.smeur.eli;
+package eu.h2020.symbiote.smeur.eli.persistance;
 
 import static org.junit.Assert.*;
 
@@ -17,14 +17,15 @@ import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.RegionInformation;
 
-public class TestPersistenceFunctions {
+public class TestPersistenceFunctionsMongo {
 	
-	PersistenceManagerImpl pm;
+	PersistenceManagerMongo pm;
 	
 	@Before
 	public void setup() {
-		pm=new PersistenceManagerImpl();
+		pm=new PersistenceManagerMongo();
 		
 		pm.useDebugDatabase();
 		pm.wipeoutDB();
@@ -35,7 +36,7 @@ public class TestPersistenceFunctions {
 	
 	@AfterClass
 	public static void finalCleanup() {
-		PersistenceManagerImpl pm=new PersistenceManagerImpl();	// We need a private instance here as afterClass requires a static signature.
+		PersistenceManagerMongo pm=new PersistenceManagerMongo();	// We need a private instance here as afterClass requires a static signature.
 		
 		pm.useDebugDatabase();
 		pm.wipeoutDB();

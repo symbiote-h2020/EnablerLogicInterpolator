@@ -21,12 +21,16 @@ import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
+import eu.h2020.symbiote.enabler.messaging.model.NotEnoughResourcesAvailable;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
+import eu.h2020.symbiote.enabler.messaging.model.ResourcesUpdated;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerMongo;
 import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
@@ -93,9 +97,12 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		log.info("***************************************************************************");
 		
 		
-		if (pm==null) // Might have been already injected
-			this.pm=new PersistenceManagerImpl();
+		if (pm==null) { // Might have been already injected
+			this.pm=new PersistenceManagerMongo();
+		}
+		pm.init();
 
+		
 		if (this.im==null) {	// Only if not injected.
 			// TODO: Control the type created here by a setting in the config file.
 			this.im=new InterpolationManagerDummyInterpolation();
@@ -173,6 +180,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	};
 	
 	public QueryPoiInterpolatedValuesResponse queryPoiValues(QueryPoiInterpolatedValues qpiv) {
+
+		log.info("Received a QueryPoiValues message");
+		log.debug("Message is : {}", qpiv);
+
 		
 		QueryPoiInterpolatedValuesResponse result=new QueryPoiInterpolatedValuesResponse();
 		
@@ -205,13 +216,14 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.OK;
 
+			log.debug("Querying PoI's succeeded ok.");
 
 		} catch (NoInterpolationYetException e) {
-			e.printStackTrace();
+			log.error("No interpolated values available yet.", e);
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.TRY_AGAIN;
 			result.explanation=e.getMessage();						
 		} catch (Throwable t) {
-			t.printStackTrace();
+			log.error("An exception occured during querying PoI's", t);
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.ERROR;
 			result.explanation=t.toString();			
 		}
@@ -222,8 +234,8 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 	public RegisterRegionResponse registerRegion(RegisterRegion ric) {
 
-		log.debug("Received a registerRegion message");
-		log.debug("Message is : {}", ric);
+		log.info("Received a registerRegion message");
+		log.info("Message is : {}", ric);
 		
 		RegisterRegionResponse result=new RegisterRegionResponse();
 		result.status=RegisterRegionResponse.StatusCode.SUCCESS;
@@ -261,13 +273,18 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 			// TODO: This behavior is just for testing.
 			// It will provide dummy interpolated values without having measurement values available
+			log.error("Warning: \"Auto\"-interpolation is switched on!!!!");
 			im.startInterpolation(regInfo, null, this);
+			
+			log.info("Region registration passed ok");
 
 		} catch(Throwable t) {
-			log.error("Problems when registering a consumer:", t);
+			log.error("Problems when registering a region:", t);
 			result.status=RegisterRegionResponse.StatusCode.ERROR;
 			result.explanation=t.getMessage();
 		}
+		
+		log.info("Sending a response of\n"+result);
 		
 		return result;
 	}
@@ -275,6 +292,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 	
 	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
+		
+		log.info("Received a query for interpolated values as:"+request);
+		
 		QueryInterpolatedStreetSegmentListResponse response=new QueryInterpolatedStreetSegmentListResponse();
 		String sslID=null;
 		
@@ -291,6 +311,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			if (!this.pm.yRegionExists(sslID)) {
 				response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.UNKNOWN_SSLID;
 				response.explanation="The ID "+ sslID + " is not known to the interpolator. Has it been registered?";
+				log.info("Replying with a response of "+response);				
 				return response;
 			}
 			
@@ -308,6 +329,8 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			response.status=QueryInterpolatedStreetSegmentListResponse.StatusCode.ERROR;
 			response.explanation=t.getMessage();
 		}
+		
+		log.info("Replying with a response of "+response);
 		
 		return response;
 	}
@@ -597,6 +620,18 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 		
 		return result;
+	}
+
+
+	@Override
+	public void notEnoughResources(NotEnoughResourcesAvailable arg0) {
+		log.info("notEnoughResources message received but not implemented");
+	}
+
+
+	@Override
+	public void resourcesUpdated(ResourcesUpdated arg0) {
+		log.info("resourcesUpdated message received but not implemented");		
 	}
 
 	
