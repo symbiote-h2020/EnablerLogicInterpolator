@@ -30,6 +30,7 @@ import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
+import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerFS;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerMongo;
 import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
@@ -68,7 +69,6 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	 * This routine allows to inject an interpolation manager.
 	 * The intended usage is to inject mock objects for unit testing.
 	 * If the manager is not set here, the init phase will create a suitable default.
-	 * Note, that init will not be called on an injected interploation manager. 
 	 * @param im
 	 */
 	public void setInterpolationManager(InterpolationManager im) {
@@ -98,7 +98,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		
 		if (pm==null) { // Might have been already injected
-			this.pm=new PersistenceManagerMongo();
+			this.pm=new PersistenceManagerFS();
 		}
 		pm.init();
 
@@ -486,7 +486,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
 
 		try {
-			log.info("querying fixed resources: {}", new ObjectMapper().writeValueAsString(response));
+			log.info("querying fixed resources response: {}", new ObjectMapper().writeValueAsString(response));
 		} catch (JsonProcessingException e) {
 			log.error("Problem with deserializing ResourceManagerAcquisitionStartResponse", e);
 		}
