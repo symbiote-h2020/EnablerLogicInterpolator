@@ -8,6 +8,7 @@ import java.util.Random;
 import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.cloud.model.data.observation.Property;
+import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -81,7 +82,9 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 		}
 		ss.exposure.clear();
 		
-		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), null, null); 
+		UnitOfMeasurement uom=new UnitOfMeasurement("kg/cnm", "kg per cube nautical mile", "another obscure unit :-)");
+		
+		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), prop, uom); 
 		ss.exposure.put(prop.getLabel(), obsValue);		
 	}
 	

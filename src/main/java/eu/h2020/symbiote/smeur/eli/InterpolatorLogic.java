@@ -32,6 +32,7 @@ import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerFS;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerMongo;
+import eu.h2020.symbiote.smeur.messages.DebugAction;
 import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
 import eu.h2020.symbiote.smeur.messages.QueryInterpolatedStreetSegmentList;
@@ -121,7 +122,31 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				QueryPoiInterpolatedValues.class, 
 			    (m) -> this.queryPoiValues(m));
 
+		enablerLogic.registerAsyncMessageFromEnablerLogicConsumer(
+				DebugAction.class, 
+			    (m) -> this.debugAction(m));
+
+		
+//		for (int i=0; i<2; i++) {
+//			try {
+//				Thread.sleep(1000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		
+//			DebugAction da=new DebugAction();
+//			da.actionString="Yupp";
+//			enablerLogic.sendSyncMessageToEnablerLogic("EnablerLogicInterpolator", da, String.class);
+//		}
+
 	}
+
+	private void debugAction(DebugAction m) {
+		System.out.println("Debug debug");
+		return;
+	}
+
 
 	@Override
 	public void measurementReceived(EnablerLogicDataAppearedMessage dataAppeared) {
@@ -200,20 +225,36 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 			result.theData=new HashMap<String, PoIInformation>();
 
-			// TODO: This algorithm makes exhaustive use of the database.
-			// Maybe a small cache can speed up things tremendously by potentially reading the same region again and again.
-			// This depends on how good caching already is for mongoDB.
-			for (Entry<String, Location> entry : poiList.entrySet()) {
-				
-				String poiID=entry.getKey();
-				Location poiLocation=entry.getValue();
-				
-				PoIInformation poii=queryPoiValuesForOnePoI(poiID, poiLocation);
-				
-				result.theData.put(poiID, poii);
-			}
+			log.debug("Finding values for PoI's now");
 
 			
+			Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
+			
+			for (String regID : allRegionIDs) {
+
+				log.debug("Testing region {}", regID);
+				RegionInformation ri=pm.retrieveRegionInformation(regID);
+				log.debug("ri is {}", ri);
+
+				StreetSegmentList interpol=pm.retrieveInterpolatedValues(regID);
+
+				Map<String, PoIInformation> resultsForThisRegion=findPoiValuesPerRegion(ri, interpol, poiList);
+
+				result.theData.putAll(resultsForThisRegion);
+				
+			}
+
+
+			Iterator<Entry<String, Location>> it=poiList.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<String, Location> e=it.next();
+				String poiID=e.getKey();
+				log.debug("No region found for poiID");
+				PoIInformation pi=new PoIInformation();
+				pi.errorReason="No suitable region found";
+				result.theData.put(poiID, pi);
+			}
+						
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.OK;
 
 			log.debug("Querying PoI's succeeded ok.");
@@ -227,6 +268,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.ERROR;
 			result.explanation=t.toString();			
 		}
+		
+		log.debug("Result is {}", result);
+		
 		return result;
 	}
 
@@ -576,13 +620,18 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 	private PoIInformation queryPoiValuesForOnePoI(String pointID, Location poiLocation) {
 
+		log.debug("Trying to find values for {}  @ {}", pointID, poiLocation);
+		
 		PoIInformation result=new PoIInformation();
 		
 		Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
 		
 		RegionInformation regInfo=null;
 		for (String regID : allRegionIDs) {
+			log.debug("Testing region {}", regID);
 			RegionInformation ri=pm.retrieveRegionInformation(regID);
+			
+			log.debug("ri is {}", ri);
 			double poiDistance=distance(ri.center, poiLocation);
 			if (poiDistance<=ri.radius) {
 				regInfo=ri;
@@ -591,9 +640,12 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		}
 		
 		if (regInfo==null) {	// Still no region? --> no suitable region available.
+			log.debug("No region found");
 			result.errorReason="No suitable region found";
 			return result;
 		}
+
+		
 
 		result.regionID=regInfo.regionID;
 		
@@ -606,8 +658,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 		
 		result.poiID=pointID;
-			
+
+		log.debug("Searching region {} for a good street segment", regInfo.regionID);
 		String nearestSegmentID=findNearestSegment(poiLocation, sslList);
+		log.debug("nearest ID is {}", nearestSegmentID);
 			
 		StreetSegment nearestSS=interpol.get(nearestSegmentID);
 		if (nearestSS==null) {
@@ -618,6 +672,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		result.theSegment=nearestSS;
 		result.interpolatedValues=nearestSS.exposure;
 
+		log.debug("SSL Search for PoI: result={}", result);
 		
 		return result;
 	}
@@ -633,6 +688,57 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	public void resourcesUpdated(ResourcesUpdated arg0) {
 		log.info("resourcesUpdated message received but not implemented");		
 	}
+
+
+	
+	private Map<String, PoIInformation> findPoiValuesPerRegion(RegionInformation regInfo, StreetSegmentList interpol,
+			Map<String, Location> poiList) {
+
+		Map<String, PoIInformation> result=new HashMap<String, PoIInformation>();
+		
+
+		Iterator<Entry<String, Location>> it=poiList.entrySet().iterator();
+		while (it.hasNext()) {
+
+			Entry<String, Location> e=it.next();
+			String poiID=e.getKey();
+			Location poiLocation=e.getValue();
+			
+			double poiDistance=distance(regInfo.center, poiLocation);
+			if (poiDistance>regInfo.radius)
+				continue;
+
+
+			PoIInformation poii=new PoIInformation();
+			poii.regionID=regInfo.regionID;
+			poii.poiID=poiID;
+			
+			if (interpol==null) {
+				poii.errorReason="No interpolated values available for region";
+			} else {
+
+			
+				log.debug("Searching region {} for a good street segment", regInfo.regionID);
+				String nearestSegmentID=findNearestSegment(poiLocation, regInfo.theList);
+				log.debug("nearest ID is {}", nearestSegmentID);
+					
+				StreetSegment nearestSS=interpol.get(nearestSegmentID);
+				if (nearestSS==null) {
+					poii.errorReason="Internal error. A segment was in the ssl but not in the interpolated values.";
+				}
+					
+				poii.theSegment=nearestSS;
+				poii.interpolatedValues=nearestSS.exposure;
+			}
+			result.put(poiID, poii);
+			it.remove();
+			
+		}
+		
+		return result;
+	}
+
+
 
 	
 }

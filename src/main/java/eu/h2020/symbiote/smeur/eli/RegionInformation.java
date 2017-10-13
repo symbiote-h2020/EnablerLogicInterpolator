@@ -90,6 +90,16 @@ public class RegionInformation {
 	    assert false : "hashCode not designed";
 	    return 42; // any arbitrary constant will do
 	}
+	
+	
+	public String toString() {
+		StringBuffer buffer=new StringBuffer();
+		
+		buffer.append("Center=").append(this.center).append("/").append("Radius=").append(this.radius);
+
+		
+		return buffer.toString();
+	}
 
 }
 

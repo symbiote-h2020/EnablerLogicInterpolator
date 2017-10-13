@@ -84,6 +84,7 @@ public class TestQueryPoiValues {
 		
 		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"Reg1"})));
 		when(pmMock.retrieveRegionInformation("Reg1")).thenReturn(regInfo);
+		when(pmMock.retrieveInterpolatedValues("Reg1")).thenReturn(null);
 		
 		// This is where the shit hits the fan....
 		qpoir=il.queryPoiValues(qpoi);
