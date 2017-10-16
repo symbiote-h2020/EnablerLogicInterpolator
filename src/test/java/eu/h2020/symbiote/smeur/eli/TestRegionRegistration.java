@@ -128,14 +128,15 @@ public class TestRegionRegistration {
 		assertEquals(RegisterRegionResponse.StatusCode.SUCCESS, ricr.status);
 		
 		
-		assertEquals(2, resourceRequestCapture.getAllValues().size());	// Expect two calls to get resources.
+		assertEquals(1, resourceRequestCapture.getAllValues().size());	// Expect one calls to get resources. 
+																		// Note: Request for moble sensors is commented out
 		
 		// 2. A request for fixed resources should have been generated
 		ResourceManagerTaskInfoRequest request=resourceRequestCapture.getAllValues().get(0);
 		assertNotNull(request);
 		
 		assertEquals("SomeID:fixed", request.getTaskId());
-		assertEquals("P0000-00-00T00:10:00", request.getCachingInterval());
+		assertEquals("P0000-00-00T00:10:00", request.getQueryInterval());
 		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
 		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
 		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
@@ -143,15 +144,15 @@ public class TestRegionRegistration {
 		
 		// 3. A request for mobile resources should have been generated.
 		// TODO: How are fixed and mobile resources distinguished. 
-		request=resourceRequestCapture.getAllValues().get(1);
-		assertNotNull(request);
-		
-		assertEquals("SomeID:mobile", request.getTaskId());
-		assertEquals("P0000-00-00T00:01:00", request.getCachingInterval());
-		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
-		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
-		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
-		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property().size());
+//		request=resourceRequestCapture.getAllValues().get(1);
+//		assertNotNull(request);
+//		
+//		assertEquals("SomeID:mobile", request.getTaskId());
+//		assertEquals("P0000-00-00T00:01:00", request.getCachingInterval());
+//		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
+//		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
+//		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
+//		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property().size());
 		
 		
 		// 4. The region information should be stored through the Persistence Manager.

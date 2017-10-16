@@ -42,6 +42,7 @@ import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 
+
 @Component
 public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.InterpolationDoneHandler {
 	private static final Logger log = LoggerFactory.getLogger(InterpolatorLogic.class);
@@ -88,7 +89,6 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	// public interface routines
 	
 
-	@Override
 	public void initialization(EnablerLogic enablerLogic) {
 		this.enablerLogic = enablerLogic;
 
@@ -148,7 +148,6 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 
-	@Override
 	public void measurementReceived(EnablerLogicDataAppearedMessage dataAppeared) {
 		
 		if (dataAppeared==null) {
@@ -304,7 +303,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			
 			
 			queryFixedStations(enablerLogic, regionID, center, radius, properties);
-			queryMobileStations(enablerLogic, regionID, center, radius, properties);
+//			queryMobileStations(enablerLogic, regionID, center, radius, properties);
 			
 			RegionInformation regInfo=new RegionInformation();
 			regInfo.regionID=regionID;
@@ -507,15 +506,12 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 	
 	protected void queryFixedStations(EnablerLogic el, String consumerID, Location center, Double radius, Set<Property> props) {
-		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
-		request.setTaskId(consumerID+":fixed");
-		request.setEnablerLogicName("interpolator");
-		request.setMinNoResources(1);
-		request.setCachingInterval("P0000-00-00T00:10:00"); // 10 mins.
+		String samplingPeriod="P0000-00-00T00:10:00";
 		// Although the sampling period is either 30 mins or 60 mins there is a transmit
 									// delay.
 									// If we miss one reading by just 1 second and we set the interval to 30 mins we
 									// are always 29 mins and 59 late.
+
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
 		coreQueryRequest.setLocation_lat(center.getLatitude());
 		coreQueryRequest.setLocation_long(center.getLongitude());
@@ -526,7 +522,17 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			propsAsString.add(p.getLabel());
 		coreQueryRequest.setObserved_property(propsAsString);
 
-		request.setCoreQueryRequest(coreQueryRequest);
+		ResourceManagerTaskInfoRequest request=new ResourceManagerTaskInfoRequest(
+				consumerID+":fixed",	// TaskID 
+				1,						// minNoResources	 
+				coreQueryRequest,
+				samplingPeriod,	// queryInterval 
+                false,	// allowCaching 
+                null,	// Caching interval
+                false,	// Inform platformproxy 
+                "interpolator",	// platform ID
+                null); 
+		
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
 
 		try {
@@ -678,13 +684,11 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 
-	@Override
 	public void notEnoughResources(NotEnoughResourcesAvailable arg0) {
 		log.info("notEnoughResources message received but not implemented");
 	}
 
 
-	@Override
 	public void resourcesUpdated(ResourcesUpdated arg0) {
 		log.info("resourcesUpdated message received but not implemented");		
 	}
