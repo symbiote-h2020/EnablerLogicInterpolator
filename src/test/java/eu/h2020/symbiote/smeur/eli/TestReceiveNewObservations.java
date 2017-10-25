@@ -12,9 +12,9 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 

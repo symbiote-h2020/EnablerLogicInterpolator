@@ -2,7 +2,7 @@ package eu.h2020.symbiote.smeur.eli.externalInterpolation;
 
 import java.util.List;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.smeur.eli.InterpolationManager.InterpolationDoneHandler;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
 

@@ -1,6 +1,6 @@
 package eu.h2020.symbiote.smeur.eli;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 
 /**
  * A small collection of things that come handy.
@@ -10,11 +10,11 @@ import eu.h2020.symbiote.cloud.model.data.observation.Location;
 public class Utils {
 	
 	
-	public static Location calculateCenter(Location[] points) {
+	public static WGS84Location calculateCenter(WGS84Location[] points) {
 		double lon=0.0;
 		double lat=0.0;
 
-		for (Location p : points) {
+		for (WGS84Location p : points) {
 			lon+=p.getLongitude();
 			lat+=p.getLatitude();
 		}
@@ -23,7 +23,7 @@ public class Utils {
 		lon/=points.length;
 		lat+=points.length;
 
-		Location center=new Location(lon, lat, 0.0, null, null);
+		WGS84Location center=new WGS84Location(lon, lat, 0.0, null, null);
 
 		return center;
 	}

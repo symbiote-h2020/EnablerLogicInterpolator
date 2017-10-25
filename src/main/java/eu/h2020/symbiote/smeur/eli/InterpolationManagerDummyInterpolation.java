@@ -1,14 +1,15 @@
 package eu.h2020.symbiote.smeur.eli;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
-import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
+import eu.h2020.symbiote.model.cim.Observation;
+import eu.h2020.symbiote.model.cim.ObservationValue;
+import eu.h2020.symbiote.model.cim.Property;
+import eu.h2020.symbiote.model.cim.UnitOfMeasurement;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -82,10 +83,10 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 		}
 		ss.exposure.clear();
 		
-		UnitOfMeasurement uom=new UnitOfMeasurement("kg/cnm", "kg per cube nautical mile", "another obscure unit :-)");
+		UnitOfMeasurement uom=new UnitOfMeasurement("kg/cnm", "kg per cube nautical mile", Arrays.asList(new String[] {"another obscure unit :-)"}));
 		
 		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), prop, uom); 
-		ss.exposure.put(prop.getLabel(), obsValue);		
+		ss.exposure.put(prop.getName(), obsValue);		
 	}
 	
 }

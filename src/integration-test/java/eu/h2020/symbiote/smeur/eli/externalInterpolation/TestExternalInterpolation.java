@@ -10,11 +10,11 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
-import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
+import eu.h2020.symbiote.model.cim.Observation;
+import eu.h2020.symbiote.model.cim.ObservationValue;
+import eu.h2020.symbiote.model.cim.Property;
+import eu.h2020.symbiote.model.cim.UnitOfMeasurement;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
@@ -55,7 +55,7 @@ public class TestExternalInterpolation {
 		StreetSegment s1=new StreetSegment();
 		
 		s1.id="s1";
-		s1.segmentData=new Location[] {new Location(1.0, 1.0, 0.0, null, null)};
+		s1.segmentData=new WGS84Location[] {new WGS84Location(1.0, 1.0, 0.0, null, null)};
 		s1.comment="Weg1";
 		ssl.put("s1", s1);
 		
@@ -64,10 +64,10 @@ public class TestExternalInterpolation {
 		regInfo.regionID="testRegion";
 		regInfo.theList=ssl;
 
-		ObservationValue ob1V1=new ObservationValue("3.14", new Property("NO", null), new UnitOfMeasurement("ppm", "ppm", "no comment"));
+		ObservationValue ob1V1=new ObservationValue("3.14", new Property("NO", null), new UnitOfMeasurement("ppm", "ppm", Arrays.asList(new String[] {"no comment"})));
 		ObservationValue[] values=new ObservationValue[] {ob1V1};
 		
-		Observation ob1=new Observation("Sensor1", new Location(1.1, 1.1, 0.0, null, null), "T1", "T2", Arrays.asList(values));
+		Observation ob1=new Observation("Sensor1", new WGS84Location(1.1, 1.1, 0.0, null, null), "T1", "T2", Arrays.asList(values));
 		
 		obs=new ArrayList<Observation>();
 		obs.add(ob1);

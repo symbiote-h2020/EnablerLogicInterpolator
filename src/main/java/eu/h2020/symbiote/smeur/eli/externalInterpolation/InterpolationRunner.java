@@ -28,10 +28,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
-import eu.h2020.symbiote.cloud.model.data.observation.UnitOfMeasurement;
+import eu.h2020.symbiote.model.cim.Observation;
+import eu.h2020.symbiote.model.cim.ObservationValue;
+import eu.h2020.symbiote.model.cim.Property;
+import eu.h2020.symbiote.model.cim.UnitOfMeasurement;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.InterpolatorLogic;

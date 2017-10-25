@@ -11,10 +11,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
-
+import eu.h2020.symbiote.model.cim.Observation;
+import eu.h2020.symbiote.model.cim.ObservationValue;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
@@ -91,7 +90,7 @@ public class TestPersistenceFunctionsFS {
 		// Non-Empty segment
 
 		theSegment.id="ID1";
-		theSegment.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(3.0, 4.0, 0.0, null, null)};
+		theSegment.segmentData=new WGS84Location[] {new WGS84Location(1.0, 2.0, 0.0, null, null), new WGS84Location(3.0, 4.0, 0.0, null, null)};
 		theSegment.comment="This is all so stupid :-)";
 		
 		pm.persistRegionInformation("some id", regInfo);

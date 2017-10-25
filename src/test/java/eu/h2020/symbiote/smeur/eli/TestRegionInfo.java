@@ -2,9 +2,10 @@ package eu.h2020.symbiote.smeur.eli;
 
 import static org.junit.Assert.*;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
+import eu.h2020.symbiote.model.cim.Property;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
+import java.util.Arrays;
 import java.util.HashSet;
 
 import org.junit.Test;
@@ -21,7 +22,7 @@ public class TestRegionInfo {
 		regInfo.dateRegistered="someDate";
 		
 		regInfo.properties=new HashSet<Property>();
-		regInfo.properties.add(new Property("NO", "NitrogenOxyde"));
+		regInfo.properties.add(new Property("NO", Arrays.asList(new String[] {"NitrogenOxyde"})));
 		
 		regInfo.theList=new StreetSegmentList();
 		

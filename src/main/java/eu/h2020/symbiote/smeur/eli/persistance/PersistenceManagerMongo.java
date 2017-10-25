@@ -26,7 +26,7 @@ import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;
 

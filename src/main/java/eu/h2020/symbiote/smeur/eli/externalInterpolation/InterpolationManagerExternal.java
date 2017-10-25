@@ -11,7 +11,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Observation;
+import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.InterpolationManager;
 import eu.h2020.symbiote.smeur.eli.RegionInformation;

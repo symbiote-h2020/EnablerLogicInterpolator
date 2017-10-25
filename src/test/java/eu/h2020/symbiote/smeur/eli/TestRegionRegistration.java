@@ -13,10 +13,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.model.cim.Property;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
@@ -101,7 +101,7 @@ public class TestRegionRegistration {
 
 		StreetSegment ss=new StreetSegment();
 		ss.id="1";
-		ss.segmentData=new Location[] {new Location(1.0, 2.0, 0.0, null, null), new Location(5.0, 6.0, 0.0, null, null)}; // Center=3.0, 4.0
+		ss.segmentData=new WGS84Location[] {new WGS84Location(1.0, 2.0, 0.0, null, null), new WGS84Location(5.0, 6.0, 0.0, null, null)}; // Center=3.0, 4.0
 		ric.streetSegments.put(ss.id, ss);
 
 		ric.properties=new HashSet<Property>();

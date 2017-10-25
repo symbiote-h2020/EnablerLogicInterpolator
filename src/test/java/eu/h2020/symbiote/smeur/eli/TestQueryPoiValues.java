@@ -12,9 +12,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
-import eu.h2020.symbiote.cloud.model.data.observation.ObservationValue;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
+import eu.h2020.symbiote.model.cim.ObservationValue;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
@@ -72,14 +72,14 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testNoSuitableRegion() {
-		HashMap<String, Location> thePoints=new HashMap<String, Location>();
-		thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
+		HashMap<String, WGS84Location> thePoints=new HashMap<String, WGS84Location>();
+		thePoints.put("SomePoint", new WGS84Location(20.0, 20.0, 0.0, null, null));
 
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
 		RegionInformation regInfo=new RegionInformation();
-		regInfo.center=new Location(10.0, 10.0, 0.0, null, null);
+		regInfo.center=new WGS84Location(10.0, 10.0, 0.0, null, null);
 		regInfo.radius=20.0;
 		
 		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"Reg1"})));
@@ -107,15 +107,15 @@ public class TestQueryPoiValues {
 	@Test
 	public void testNoInterpolatedValues() {
 		
-		HashMap<String, Location> thePoints = new HashMap<String, Location>();
-		thePoints.put("SomePoint", new Location(20.0, 20.0, 0.0, null, null));
+		HashMap<String, WGS84Location> thePoints = new HashMap<String, WGS84Location>();
+		thePoints.put("SomePoint", new WGS84Location(20.0, 20.0, 0.0, null, null));
 		
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
 		
 		RegionInformation regInfo=new RegionInformation();
 		regInfo.regionID="region";
-		regInfo.center=new Location(19.9, 19.9, 0.0, null, null);
+		regInfo.center=new WGS84Location(19.9, 19.9, 0.0, null, null);
 		regInfo.radius=20.0;
 		
 		when(pmMock.getAllRegionIDs()).thenReturn(new HashSet<String>(Arrays.asList(new String[] {"Reg1"})));
@@ -146,8 +146,8 @@ public class TestQueryPoiValues {
 	 */
 	@Test
 	public void testNormal() {
-		HashMap<String, Location> thePoints = new HashMap<String, Location>();
-		thePoints.put("PointID", new Location(9.9, 10.0, 0.0, null, null));
+		HashMap<String, WGS84Location> thePoints = new HashMap<String, WGS84Location>();
+		thePoints.put("PointID", new WGS84Location(9.9, 10.0, 0.0, null, null));
 
 		QueryPoiInterpolatedValues qpoi=new QueryPoiInterpolatedValues(thePoints);
 		QueryPoiInterpolatedValuesResponse qpoir;
@@ -156,7 +156,7 @@ public class TestQueryPoiValues {
 		StreetSegment ss=new StreetSegment();
 
 		ss.id="Who cares";
-		ss.segmentData=new Location[] {new Location(10.0, 10.0, 0.0, null, null)};
+		ss.segmentData=new WGS84Location[] {new WGS84Location(10.0, 10.0, 0.0, null, null)};
 		ss.exposure=new HashMap<String, ObservationValue>();			// We fill both, points and exposure here as we are lazy and reuse the same list for points and exposures.
 		ss.exposure.put("NO", new ObservationValue("3.14", null, null));
 
@@ -165,7 +165,7 @@ public class TestQueryPoiValues {
 		
 		RegionInformation regInfo=new RegionInformation();
 		regInfo.regionID="region";
-		regInfo.center=new Location(9.9, 9.9, 0.0, null, null);
+		regInfo.center=new WGS84Location(9.9, 9.9, 0.0, null, null);
 		regInfo.radius=20.0;
 		regInfo.theList=ssl;
 		

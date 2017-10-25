@@ -7,8 +7,8 @@ import java.util.Set;
 
 import java.util.Objects;
 
-import eu.h2020.symbiote.cloud.model.data.observation.Location;
-import eu.h2020.symbiote.cloud.model.data.observation.Property;
+import eu.h2020.symbiote.model.cim.Property;
+import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
 
@@ -27,7 +27,7 @@ public class RegionInformation {
 	
 	
 	// These are used by PoI search
-	public Location center;
+	public WGS84Location center;
 	public Double radius;
 
 	public String dateRegistered;	// Maybe we want to use this one of these days for some house keeping in the database.
