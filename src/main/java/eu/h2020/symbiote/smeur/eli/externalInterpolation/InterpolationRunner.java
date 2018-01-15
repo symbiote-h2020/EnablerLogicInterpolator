@@ -23,6 +23,7 @@ import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -49,10 +50,22 @@ public class InterpolationRunner implements Runnable {
 	private ArrayBlockingQueue<InterpolationJob> jobQueue;
 
 	File workingDirBase=new File("InterpolatorWorkingDir");	// TODO: Not hardcoded. Set from the config file.
+	
+	
+	String sslFileName="SSL.json";
+	String obsFileName="OBS.json";
+	String resultFileName="interpolated.json";
+	
+	
 
 	
-	public InterpolationRunner(ArrayBlockingQueue<InterpolationJob> jobQueue) {
+	
+	private String executableForInterpolation;
+
+	
+	public InterpolationRunner(ArrayBlockingQueue<InterpolationJob> jobQueue, String executableForInterpolation) {
 		this.jobQueue=jobQueue;
+		this.executableForInterpolation=executableForInterpolation;
 	}
 
 	@Override
@@ -68,27 +81,40 @@ public class InterpolationRunner implements Runnable {
 
 	private void cycle() {
 		while (true) {
-			InterpolationJob job=null;
 			try {
-				job=jobQueue.take();
-			} catch (InterruptedException e) {
-				// Dead code. Shouldn't happen unless we change the complete concept
-				e.printStackTrace();
+				InterpolationJob job=null;
+				try {
+					job=jobQueue.take();
+				} catch (InterruptedException e) {
+					// Dead code. Shouldn't happen unless we change the complete concept
+					e.printStackTrace();
+				}
+				
+				if (job==null)
+					continue;
+				
+				log.info("Starting a new external interpolation job for {} ", job.regInfo.regionID);
+				
+				File workingDir=prepareCall(job.regInfo, job.obs, new Date());
+				
+				if (executableForInterpolation==null) {
+					log.info("Executable for interpolation not set. Defaulting to unit testing value.");
+					executableForInterpolation="fakeInterpolation.py";	// Use this for unit testing.
+																		// TODO: We need something for unit testing which allows different executables and cleanup. 
+																		// The mechanism as it is now is not feasible for real operations 
+				}
+				
+				File theExecutable=new File(executableForInterpolation);
+				
+				runInterpolator(theExecutable, workingDir);
+				StreetSegmentList interpolated=retrieveResults(job.regInfo, workingDir);
+				
+				job.callback.OnInterpolationDone(job.regInfo, interpolated);
+				
+//				cleanupWorkingDir();	TODO: Enable me again
+			} catch(Throwable t) {
+				log.error("Exception during interpolation job", t);
 			}
-			
-			if (job==null)
-				continue;
-			
-			File workingDir=prepareCall(job.regInfo, job.obs, new Date());
-			
-			File theExecutable=new File(workingDirBase, "fakeInterpolation.py");
-			
-			runInterpolator(theExecutable, workingDir);
-			StreetSegmentList interpolated=retrieveResults(job.regInfo, workingDir);
-			
-			job.callback.OnInterpolationDone(job.regInfo, interpolated);
-			
-			cleanupWorkingDir();
 		}
 	}
 
@@ -137,7 +163,7 @@ public class InterpolationRunner implements Runnable {
 	StreetSegmentList retrieveResults(RegionInformation regInfo, File workingDir) {
 		StreetSegmentList interpolated=new StreetSegmentList();
 
-		File interpolatedFile=new File(workingDir, "output.json");	// TODO: Shouldn't be hard coded
+		File interpolatedFile=new File(workingDir, resultFileName);
 		
 		FileInputStream fis=null;
 		try {
@@ -182,6 +208,7 @@ public class InterpolationRunner implements Runnable {
 
 	void runInterpolator(File theExecutable, File workingDir) {
 		
+		
 		boolean yWindows=false;
 		String osName=System.getProperty("os.name");
 		if (osName.toUpperCase().contains("WINDOWS"))
@@ -198,11 +225,12 @@ public class InterpolationRunner implements Runnable {
 		
 //		cmdLineArgs.add("dir");
 		cmdLineArgs.add(theExecutable.getAbsolutePath());
-		cmdLineArgs.add("SSL.json");
-		cmdLineArgs.add("OBS.json");
-		cmdLineArgs.add("interpolated.json");
+		cmdLineArgs.add(sslFileName);
+		cmdLineArgs.add(obsFileName);
+		cmdLineArgs.add(resultFileName);
 
-		CommandLine cmdLine=new CommandLine(cmdLineArgs.remove(0));
+		String executable=cmdLineArgs.remove(0);
+		CommandLine cmdLine=new CommandLine(executable);
 		for (String c : cmdLineArgs) {
 			cmdLine.addArgument(c, true);
 		}
@@ -213,10 +241,9 @@ public class InterpolationRunner implements Runnable {
 		try {
 			executor.execute(cmdLine);
 		} catch (ExecuteException ee) {
-			// On wrong exit code
+			log.error("Problems executing the external interpolator: ", ee);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Problems starting the external interpolator: ", e);
 		}
 
 	}
@@ -239,6 +266,7 @@ public class InterpolationRunner implements Runnable {
 		File workingDir=new File(workingDirBase, wds);
 		
 		boolean yOk=workingDir.mkdir();
+		log.info("Result of workingdir creation was {}", yOk);
 		
 		ReducedStreetSegmentList reducedList=new ReducedStreetSegmentList();
 		reducedList.addAll(regInfo.theList);
@@ -251,13 +279,14 @@ public class InterpolationRunner implements Runnable {
 		} catch (JsonProcessingException e) {
 			// Any problem here can only be due to coding problems (aka "developer too stupid error")
 			// So we just trace the problem.
-			// Nothing more we 
+			// Nothing more we can do.
 			e.printStackTrace();
 			throw new IllegalStateException("Error encoding streetSegmentList", e);
 		}
 
 		try {
-			FileWriter fw=new FileWriter(new File(workingDir, "segmentList"));
+
+			FileWriter fw=new FileWriter(new File(workingDir, sslFileName));
 			fw.append(json);
 			fw.close();
 		} catch (IOException e1) {
@@ -271,14 +300,14 @@ public class InterpolationRunner implements Runnable {
 		} catch (JsonProcessingException e) {
 			// Any problem here can only be due to coding problems (aka "developer too stupid error")
 			// So we just trace the problem.
-			// Nothing more we 
+			// Nothing more we can do
 			e.printStackTrace();
 			throw new IllegalStateException("Error encoding streetSegmentList", e);
 		}
 
 		
 		try {
-			FileWriter fw=new FileWriter(new File(workingDir, "observations"));
+			FileWriter fw=new FileWriter(new File(workingDir, obsFileName));
 			fw.append(json);
 			fw.close();
 		} catch (IOException e1) {

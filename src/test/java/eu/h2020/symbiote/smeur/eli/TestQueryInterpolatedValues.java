@@ -25,6 +25,7 @@ public class TestQueryInterpolatedValues {
 		elMock=mock(EnablerLogic.class);
 		pmMock=mock(PersistenceManager.class);
 		
+		il.interpolationMethod="dummy";
 		il.setPersistenceManager(pmMock);
 		il.initialization(elMock);
 		

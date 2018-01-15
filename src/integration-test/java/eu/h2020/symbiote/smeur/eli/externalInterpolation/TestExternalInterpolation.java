@@ -99,7 +99,7 @@ public class TestExternalInterpolation {
 	 */
 	@Test
 	public void testPrepareCall() {
-		InterpolationRunner im = new InterpolationRunner(null);
+		InterpolationRunner im = new InterpolationRunner(null, null);
 		
 		
 		Date dirDate=new Date(0);
@@ -121,7 +121,7 @@ public class TestExternalInterpolation {
 		// We do the test with a dirty trick. The script called here is a fakedInterpolation that just creates some correct output.
 		// It's not about testing the script here, it's about calling the correct script with the right parameters
 		
-		InterpolationRunner im = new InterpolationRunner(null);
+		InterpolationRunner im = new InterpolationRunner(null, null);
 
 		File theExecutable=new File(workingDirBase, "fakeInterpolation.py");
 		File workingDir=new File(workingDirBase, "testregion");	// <-- Known because I assembled the resources for this test.
@@ -141,7 +141,7 @@ public class TestExternalInterpolation {
 		
 		File workingDir=new File(workingDirBase, "testregion");
 		
-		InterpolationRunner im = new InterpolationRunner(null);
+		InterpolationRunner im = new InterpolationRunner(null, null);
 		
 		im.retrieveResults(regInfo, workingDir);
 		

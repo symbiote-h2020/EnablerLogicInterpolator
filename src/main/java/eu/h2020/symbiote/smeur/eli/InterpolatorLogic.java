@@ -1,7 +1,10 @@
 package eu.h2020.symbiote.smeur.eli;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -11,12 +14,15 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
+import eu.h2020.symbiote.enabler.messaging.model.CancelTaskRequest;
+import eu.h2020.symbiote.enabler.messaging.model.CancelTaskResponse;
 import eu.h2020.symbiote.enabler.messaging.model.EnablerLogicDataAppearedMessage;
 import eu.h2020.symbiote.enabler.messaging.model.NotEnoughResourcesAvailable;
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerAcquisitionStartResponse;
@@ -29,9 +35,9 @@ import eu.h2020.symbiote.model.cim.Property;
 import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
+import eu.h2020.symbiote.smeur.eli.externalInterpolation.InterpolationManagerExternal;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManager;
 import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerFS;
-import eu.h2020.symbiote.smeur.eli.persistance.PersistenceManagerMongo;
 import eu.h2020.symbiote.smeur.messages.DebugAction;
 import eu.h2020.symbiote.smeur.messages.PoIInformation;
 import eu.h2020.symbiote.smeur.messages.PushInterpolatedStreetSegmentList;
@@ -46,13 +52,28 @@ import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
 @Component
 public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.InterpolationDoneHandler {
 	private static final Logger log = LoggerFactory.getLogger(InterpolatorLogic.class);
+	public static InterpolatorLogic theIL;
+	
 	
 	private EnablerLogic enablerLogic;
 
 	private PersistenceManager pm=null;
+	
+	@Value("${interpolation.method}")
+	String interpolationMethod;
 	private InterpolationManager im=null;
+	
+	@Value("${interpolation.executable}")	// Used with external interpolation.
+	String executableForInterpolation;
+	
+
+	
 
 	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
+	
+	InterpolatorLogic() {
+		theIL=this;
+	}
 	
 
 	// Getter/Setter
@@ -65,6 +86,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	public void setPersistenceManager(PersistenceManager pm) {
 		this.pm=pm;
 	}
+
 
 	
 	/**
@@ -105,8 +127,22 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 		
 		if (this.im==null) {	// Only if not injected.
-			// TODO: Control the type created here by a setting in the config file.
-			this.im=new InterpolationManagerDummyInterpolation();
+			
+			log.info("Interpolation method from config file is "+interpolationMethod);
+			switch(interpolationMethod) {
+				default:
+					log.info("Unknown interpolation method. Allowed methods are: dummy, external");
+					System.exit(0);
+				case "dummy":
+					this.im=new InterpolationManagerDummyInterpolation();
+					break;
+				case "external":
+					InterpolationManagerExternal ime=new InterpolationManagerExternal();
+					ime.setInterpolationExecutable(executableForInterpolation);
+					this.im=ime;
+					break;
+			}
+			
 			this.im.init();
 		}
 
@@ -148,8 +184,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 
+	@Override
 	public void measurementReceived(EnablerLogicDataAppearedMessage dataAppeared) {
 		
+		log.info("Data appeared");
 		if (dataAppeared==null) {
 			log.error("measurementReceived called with null as an argument. Cowardly refusing to work further with that.");
 			return;	// Who does send such a mess? A pity we can't give immediate feedback here.
@@ -169,22 +207,28 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		if (!knownID)
 			return;
 		
+		log.info("Appeared data makes sense to me. Digesting it.");
 		// Everything checked. Let's start the real work.
+		
 		List<Observation> theNewObs=dataAppeared.getObservations();
+		log.info("The new data is {}", theNewObs);	// TODO: Should be on level debug but spring does not log on that level for me.
 		List<Observation> theOldObs=pm.retrieveObservations(sslID);
+		log.info("The old obs are {}", theOldObs);	// TODO: Should be on level debug but spring does not log on that level for me.
 		
 		Instant now=Instant.now();
-		Instant cutOffTime=now.minusSeconds(30*60);
+		Instant cutOffTime=now.minusSeconds(2*60*60);
 		if (!this.yUseCutoff)
 			cutOffTime=null;
 		
 		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime);	// Cutoff 30 mins
+		log.info("The merged obs are {}", mergedObservations);	// TODO: Should be on level debug but spring does not log on that level for me.
 		
 		this.pm.persistObservations(sslID, mergedObservations);
 
 		
 		RegionInformation regInfo=pm.retrieveRegionInformation(sslID);
 		
+		log.info("Data appeared: Starting interpolation.");
 		this.im.startInterpolation(regInfo, mergedObservations, this);
 				
 	}
@@ -227,7 +271,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			log.debug("Finding values for PoI's now");
 
 			
-			Set<String> allRegionIDs=pm.getAllRegionIDs();	// TODO: This routine can be placed outside so it's only called once 
+			Set<String> allRegionIDs=pm.getAllRegionIDs(); 
 			
 			for (String regID : allRegionIDs) {
 
@@ -302,18 +346,22 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			Double radius=(Double)c_and_r[1];
 			
 			
-			queryFixedStations(enablerLogic, regionID, center, radius, properties);
-//			queryMobileStations(enablerLogic, regionID, center, radius, properties);
-			
 			RegionInformation regInfo=new RegionInformation();
 			regInfo.regionID=regionID;
 			regInfo.theList=ssl;
 			regInfo.properties=properties;
 			regInfo.center=center;
 			regInfo.radius=radius;
+			regInfo.yWantsPushing=ric.yPushInterpolatedValues;
 			
 			pm.persistRegionInformation(regionID, regInfo);
 
+			
+			queryFixedStations(enablerLogic, regInfo);
+//			queryMobileStations(enablerLogic, regionID, center, radius, properties);
+			
+
+			
 			// TODO: This behavior is just for testing.
 			// It will provide dummy interpolated values without having measurement values available
 			log.error("Warning: \"Auto\"-interpolation is switched on!!!!");
@@ -331,7 +379,20 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		return result;
 	}
+
 	
+	public void requeryStations(String regionID) {
+		RegionInformation regInfo=pm.retrieveRegionInformation(regionID);
+		if (regInfo==null) {
+			Set<String> allIDs=pm.getAllRegionIDs();
+			String idString = "";
+			for(String s:allIDs) {
+				idString += (idString=="" ? "" :",")+s;
+			}
+			throw new IllegalArgumentException("Available IDs are "+idString);
+		}
+		queryFixedStations(enablerLogic, regInfo);		
+	}
 
 	
 	public QueryInterpolatedStreetSegmentListResponse queryInterpolatedData(QueryInterpolatedStreetSegmentList request) {
@@ -384,6 +445,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	@Override
 	public void OnInterpolationDone(RegionInformation regInfo, StreetSegmentList interpolated) {
 
+		
+		log.info("Interpolation done.");
+		
 		pm.persistInterpolatedValues(regInfo.regionID, interpolated);
 
 		if (regInfo.yWantsPushing) {
@@ -391,8 +455,11 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			ipl.regionID=regInfo.regionID;
 			ipl.theList=interpolated;
 	
+			log.info("Pushing the results");
 			
 			this.enablerLogic.sendAsyncMessageToEnablerLogic("EnablerLogicGreenRouteController", ipl);
+		} else {
+			log.info("Pushing is not requested for this region. Idling thumbs.");			
 		}
 		
 	}
@@ -490,8 +557,23 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 					it.remove();
 					continue;
 				}
+
+				Instant relevantInstant=null;
+				try {
+					LocalDateTime ldt=LocalDateTime.parse(relevantTime);
+					relevantInstant=ldt.toInstant(ZoneOffset.UTC);
+				} catch(java.time.format.DateTimeParseException dt) {
 					
-				Instant relevantInstant=Instant.parse(relevantTime);
+				}
+				
+				if (relevantInstant==null)
+					try {
+						relevantInstant=Instant.parse(relevantTime);
+					} catch(java.time.format.DateTimeParseException dt) {
+						log.error("Unable to parse timestamp, removing the value", dt);
+						it.remove();
+						continue;
+					}
 				
 				if (relevantInstant.isBefore(cutOffTime)) {
 					it.remove();
@@ -505,17 +587,38 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 
 	
-	protected void queryFixedStations(EnablerLogic el, String consumerID, WGS84Location center, Double radius, Set<Property> props) {
-		String samplingPeriod="P0000-00-00T00:10:00";
-		// Although the sampling period is either 30 mins or 60 mins there is a transmit
-									// delay.
-									// If we miss one reading by just 1 second and we set the interval to 30 mins we
-									// are always 29 mins and 59 late.
+	protected void queryFixedStations(EnablerLogic el, RegionInformation regInfo) {
+		
+		String consumerID=regInfo.regionID;
+		WGS84Location center=regInfo.center;
+		Double radius=regInfo.radius;
+		Set<Property> props=regInfo.properties;
+		
+		
+		String taskID=consumerID+":fixed";
+		
+		CancelTaskRequest ctr=new CancelTaskRequest();
+		String[] allIds=new String[] {taskID};
+		ctr.setTaskIdList(Arrays.asList(allIds));
+		
+		log.info("Sending a CancelTaskRequest");
+		
+		CancelTaskResponse ctrResponse=el.cancelTask(ctr);
+		
+		log.info("Response is {}", (ctrResponse==null) ? null : ctrResponse.getStatus());
+		
+		
+		
+//		String samplingPeriod="P0000-00-00T00:10:00";
+		String samplingPeriod="P0000-00-00T00:01:00";	// Speed up sampling for easier debugging
+		// Although the sampling period is either 30 mins or 60 mins there is a transmit delay. 
+		// If we miss one reading by just 1 second and we set the interval to 30 mins we
+		// are always 29 mins and 59 late.
 
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
 		coreQueryRequest.setLocation_lat(center.getLatitude());
 		coreQueryRequest.setLocation_long(center.getLongitude());
-		coreQueryRequest.setMax_distance((int)(radius*1000)); // radius 10km
+		coreQueryRequest.setMax_distance((int)(radius*10_000));	// TODO: Should be 1_000. But we need 10.000 for some strange reason
 
 		List<String> propsAsString=new ArrayList<String>();
 		for (Property p : props) 
@@ -523,13 +626,13 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		coreQueryRequest.setObserved_property(propsAsString);
 
 		ResourceManagerTaskInfoRequest request=new ResourceManagerTaskInfoRequest(
-				consumerID+":fixed",	// TaskID 
-				1,						// minNoResources	 
+				taskID,	// TaskID 
+				3,						// minNoResources	 
 				coreQueryRequest,
 				samplingPeriod,	// queryInterval 
                 false,	// allowCaching 
                 null,	// Caching interval
-                false,	// Inform platformproxy 
+                true,	// Inform platformproxy 
                 "interpolator",	// platform ID
                 null); 
 		
@@ -602,6 +705,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		}
 		
 
+		log.debug("minLat="+minLat+"/minLon="+minLon);
+		log.debug("maxLat="+maxLat+"/maxLon="+maxLon);
+		
 		double centerLat=(minLat+maxLat)/2.0;
 		double centerLon=(minLon+maxLon)/2.0;
 
@@ -615,7 +721,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			StreetSegment ss=it.next().getValue();
 			for (WGS84Location l : ss.segmentData) {
 				double dist=distance(l, center);
-				maxRadius=Math.max(maxRadius, dist);
+				if (maxRadius<dist) {
+					maxRadius=dist;
+					log.trace("max radius is now "+maxRadius+" for "+l);
+				}
 			}
 		}
 
@@ -729,10 +838,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				StreetSegment nearestSS=interpol.get(nearestSegmentID);
 				if (nearestSS==null) {
 					poii.errorReason="Internal error. A segment was in the ssl but not in the interpolated values.";
+				} else {
+					poii.theSegment=nearestSS;
+					poii.interpolatedValues=nearestSS.exposure;
 				}
-					
-				poii.theSegment=nearestSS;
-				poii.interpolatedValues=nearestSS.exposure;
 			}
 			result.put(poiID, poii);
 			it.remove();
