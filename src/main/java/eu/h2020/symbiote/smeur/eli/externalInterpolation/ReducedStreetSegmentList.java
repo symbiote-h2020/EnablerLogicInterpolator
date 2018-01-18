@@ -35,14 +35,16 @@ public class ReducedStreetSegmentList extends HashMap<String, ReducedStreetSegme
 			String segmentID=entry.getKey();
 			StreetSegment ss=entry.getValue();
 			
-			log.debug("Segment is {}", Arrays.toString(ss.segmentData));
+//			log.info("Segment is {}", Arrays.toString(ss.segmentData));	// TODO, set level to debug
 			WGS84Location center=Utils.calculateCenter(ss.segmentData);
-			log.debug("Center is {}", center);
+//			log.info("Center is {}", center);
 			
 			ReducedStreetSegment rss=new ReducedStreetSegment();
 			rss.centerLat=center.getLatitude();
 			rss.centerLon=center.getLongitude();
 			rss.comment=ss.comment;
+
+//			log.info("rss is {}", rss);
 			
 			this.put(segmentID, rss);
 		}
@@ -55,5 +57,11 @@ class ReducedStreetSegment {
 	public double centerLon;
 	public double centerLat;
 	public String comment;
+	
+	
+	
+	public String toString() {
+		return "ReducedStreetSegment: center="+this.centerLon+"/"+this.centerLat+" comment="+this.comment;
+	}
 }
 

@@ -21,7 +21,7 @@ public class Utils {
 		
 
 		lon/=points.length;
-		lat+=points.length;
+		lat/=points.length;
 
 		WGS84Location center=new WGS84Location(lon, lat, 0.0, null, null);
 

@@ -31,6 +31,7 @@ import eu.h2020.symbiote.enabler.messaging.model.ResourcesUpdated;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
 import eu.h2020.symbiote.enablerlogic.ProcessingLogic;
 import eu.h2020.symbiote.model.cim.Observation;
+import eu.h2020.symbiote.model.cim.ObservationValue;
 import eu.h2020.symbiote.model.cim.Property;
 import eu.h2020.symbiote.model.cim.WGS84Location;
 import eu.h2020.symbiote.smeur.StreetSegment;
@@ -65,6 +66,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	
 	@Value("${interpolation.executable}")	// Used with external interpolation.
 	String executableForInterpolation;
+	
+	@Value("${interpolation.minSensors}")
+	Integer minSensors;
 	
 
 	
@@ -146,6 +150,12 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			this.im.init();
 		}
 
+		
+		if (minSensors==null) {
+			log.warn("Minimal number of sensors (interpolation.minSensors) not set. Using a default of 1");
+		}
+		
+		
 		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
 				RegisterRegion.class, 
 			    (m) -> this.registerRegion(m));
@@ -210,18 +220,23 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		log.info("Appeared data makes sense to me. Digesting it.");
 		// Everything checked. Let's start the real work.
 		
+		RegionInformation ri=pm.retrieveRegionInformation(sslID);
+		
 		List<Observation> theNewObs=dataAppeared.getObservations();
-		log.info("The new data is {}", theNewObs);	// TODO: Should be on level debug but spring does not log on that level for me.
+//		log.info("The new data. Size={}, data={}", theNewObs.size(), theNewObs);
 		List<Observation> theOldObs=pm.retrieveObservations(sslID);
-		log.info("The old obs are {}", theOldObs);	// TODO: Should be on level debug but spring does not log on that level for me.
+//		log.info("The old obs:, size={}, data={}", theOldObs.size(), theOldObs);
 		
 		Instant now=Instant.now();
-		Instant cutOffTime=now.minusSeconds(2*60*60);
+//		Instant cutOffTime=now.minusSeconds(2*60*60);
+		Instant cutOffTime=now.minusSeconds(365*24L*60*60);
 		if (!this.yUseCutoff)
 			cutOffTime=null;
 		
-		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime);	// Cutoff 30 mins
-		log.info("The merged obs are {}", mergedObservations);	// TODO: Should be on level debug but spring does not log on that level for me.
+		
+		
+		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime, ri.properties);	// Cutoff 30 mins
+//		log.info("The merged obs, size={}, data={}", mergedObservations.size(), mergedObservations);
 		
 		this.pm.persistObservations(sslID, mergedObservations);
 
@@ -523,7 +538,8 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	protected List<Observation> mergeObservations( // Should be private but then it's not available for grey box unit testing
 			List<Observation> theNewObs, 
 			List<Observation> theOldObs, 
-			Instant cutOffTime) {
+			Instant cutOffTime, 
+			Set<Property> properties) {
 		
 		List<Observation> result;
 		
@@ -545,6 +561,32 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			}
 		}
 
+
+		// Filter by property
+		if (properties != null) {
+			log.info("Filtering by ObsProperties now. List of accepted properties is {}", properties);
+			Iterator<Observation> itO = result.iterator();
+			while (itO.hasNext()) {
+				Observation obs = itO.next();
+
+				log.info("Filtering observation {}", obs);
+				Iterator<ObservationValue> itV = obs.getObsValues().iterator();
+				while (itV.hasNext()) {
+					ObservationValue obsValue = itV.next();
+					log.info("Filtering ObservationValue {}", obsValue);
+					Property prop = obsValue.getObsProperty();
+					if (!properties.contains(prop)) {
+						log.info("Property {} not expected --> removing it");
+						itV.remove();
+					}
+				}
+
+				if (obs.getObsValues().isEmpty())
+					itO.remove();
+			}
+		}
+		
+		// Filter by age of observation
 		if (cutOffTime!=null) {
 			Iterator<Observation> it=result.iterator();
 			while (it.hasNext()) {
@@ -627,7 +669,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 		ResourceManagerTaskInfoRequest request=new ResourceManagerTaskInfoRequest(
 				taskID,	// TaskID 
-				3,						// minNoResources	 
+				minSensors,						// minNoResources	 
 				coreQueryRequest,
 				samplingPeriod,	// queryInterval 
                 false,	// allowCaching 

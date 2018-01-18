@@ -170,7 +170,7 @@ public class TestReceiveNewObservations {
 	 */
 	@Test
 	public void testMergeObservationsNonStandardBehavior() {
-		List<Observation> merged=il.mergeObservations(null, null, null);
+		List<Observation> merged=il.mergeObservations(null, null, null, null);
 		assertNull(merged);
 
 		
@@ -178,10 +178,10 @@ public class TestReceiveNewObservations {
 		List<Observation> observations=new ArrayList<Observation>();
 		observations.add(obs);
 
-		merged=il.mergeObservations(observations, null, null);
+		merged=il.mergeObservations(observations, null, null, null);
 		assertEquals(merged, observations);
 		
-		merged=il.mergeObservations(null, observations, null);
+		merged=il.mergeObservations(null, observations, null, null);
 		assertEquals(merged, observations);
 		
 	}
@@ -202,14 +202,14 @@ public class TestReceiveNewObservations {
 		observations3.add(obs3);
 		
 
-		List<Observation> merged = il.mergeObservations(observations, observations2, null);
+		List<Observation> merged = il.mergeObservations(observations, observations2, null, null);
 		assertEquals(2, merged.size());
 		
 		assertTrue(merged.contains(obs));
 		assertTrue(merged.contains(obs2));
 
 		// Test against the merged list, adding a similar observations again
-		merged = il.mergeObservations(merged, observations3, null);
+		merged = il.mergeObservations(merged, observations3, null, null);
 		assertEquals(2, merged.size());	// The doubled obs does not occur!
 
 		assertTrue(merged.contains(obs));
@@ -245,16 +245,16 @@ public class TestReceiveNewObservations {
 		Observation obs1=new Observation("rID1", null, cutoffTime1.toString(), cutoffTime1.toString(), null);
 		observations.add(obs1);
 
-		List<Observation> merged = il.mergeObservations(observations, null, null);
+		List<Observation> merged = il.mergeObservations(observations, null, null, null);
 		assertEquals(2, merged.size());
 		
 		assertTrue(merged.contains(obs));
 		assertTrue(merged.contains(obs1));
 
-		merged = il.mergeObservations(merged, null, cutoffTime2);
+		merged = il.mergeObservations(merged, null, cutoffTime2, null);
 		assertEquals(2, merged.size());
 
-		merged = il.mergeObservations(merged, null, cutoffTime1);
+		merged = il.mergeObservations(merged, null, cutoffTime1, null);
 		assertEquals(1, merged.size());
 
 		assertTrue(merged.contains(obs1));

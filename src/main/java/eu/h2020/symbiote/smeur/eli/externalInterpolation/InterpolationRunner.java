@@ -141,13 +141,18 @@ public class InterpolationRunner implements Runnable {
 		HashMap<String, HashMap<String, ObservationValue>> result=new HashMap<String, HashMap<String, ObservationValue>>();
 		
 		for (Entry<String, HashMap<String, ArrayList<Object>>> entry : interpolatedRaw.entrySet()) {
+			
+			// Example entry of the interpolated data:
+			// 247082160={temperature=[20.908051570560087, C]}
+			
 			String segmentID=entry.getKey();
-			HashMap<String, ArrayList<Object>> values=entry.getValue();
+			
+			HashMap<String, ArrayList<Object>> values=entry.getValue(); // This is the {temperature=[20.908051570560087, C]} part
 			for (Entry<String, ArrayList<Object>> e2 : values.entrySet()) {
-				String propCode=e2.getKey();
-				ArrayList<?> valuePair=e2.getValue();
-				Double value=(Double) valuePair.get(0);
-				String uom=(String) valuePair.get(1);
+				String propCode=e2.getKey();	// temperature in the example above
+				ArrayList<?> valuePair=e2.getValue();	// [20.908051570560087, C]
+				Double value=(Double) valuePair.get(0); // 20.908051570560087
+				String uom=(String) valuePair.get(1);	// C
 				ObservationValue obsValue=new ObservationValue(value.toString(), new Property(propCode, null), new UnitOfMeasurement(uom, null, null));
 				if (! result.containsKey(segmentID)) {
 					result.put(segmentID, new HashMap<String, ObservationValue>());
@@ -174,8 +179,11 @@ public class InterpolationRunner implements Runnable {
 	        ObjectMapper mapper = new ObjectMapper();
 	        HashMap<String, HashMap<String, ArrayList<Object>>> interpolatedRaw=null;
 	        interpolatedRaw=mapper.readValue(sContent, new TypeReference<HashMap<String, Object>>(){});
+//	        log.info("InterpolatedRaw is {}", interpolatedRaw);
 	        
 	        HashMap<String, HashMap<String, ObservationValue>> interpolatedObservations=rawInterpolatedToObservations(interpolatedRaw);
+
+//	        log.info("InterpolatedObservations is {}", interpolatedObservations);
 	        
 	        for (Entry<String, StreetSegment> entry : regInfo.theList.entrySet()) {
 	        	String ssID=entry.getKey();
@@ -183,22 +191,27 @@ public class InterpolationRunner implements Runnable {
 	        	StreetSegment ssCopy=new StreetSegment();
 	        	ssCopy.id=ss.id;
 	        	ssCopy.comment=ss.comment;
-	        	ss.exposure=interpolatedObservations.get(ssID);
+	        	HashMap<String,ObservationValue> interpolatedData=interpolatedObservations.get(ssID);
+	        	if (interpolatedData==null) {
+	        		log.error("Interpolated data for id {} is {}", ssID, interpolatedData);
+	        	}
+	        	ssCopy.exposure=interpolatedObservations.get(ssID);
 	        	
 	        	interpolated.put(ssID, ssCopy);
 	        }
 	        
-	        System.out.println(interpolatedRaw);
+	        log.info("Interpolated is {}", interpolated);
+	        
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			log.error("", e);
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.error("", e);
 		} finally {
 			try {
 				if (fis!=null)
 					fis.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				log.error("", e);
 			}
 		}
 		
