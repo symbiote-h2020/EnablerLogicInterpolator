@@ -153,7 +153,7 @@ public class InterpolationRunner implements Runnable {
 				ArrayList<?> valuePair=e2.getValue();	// [20.908051570560087, C]
 				Double value=(Double) valuePair.get(0); // 20.908051570560087
 				String uom=(String) valuePair.get(1);	// C
-				ObservationValue obsValue=new ObservationValue(value.toString(), new Property(propCode, null), new UnitOfMeasurement(uom, null, null));
+				ObservationValue obsValue=new ObservationValue(value.toString(), new Property(propCode, propCode, null), new UnitOfMeasurement(uom, uom, null, null));
 				if (! result.containsKey(segmentID)) {
 					result.put(segmentID, new HashMap<String, ObservationValue>());
 				}
@@ -184,7 +184,8 @@ public class InterpolationRunner implements Runnable {
 	        HashMap<String, HashMap<String, ObservationValue>> interpolatedObservations=rawInterpolatedToObservations(interpolatedRaw);
 
 //	        log.info("InterpolatedObservations is {}", interpolatedObservations);
-	        
+
+	        int errorCount=0;
 	        for (Entry<String, StreetSegment> entry : regInfo.theList.entrySet()) {
 	        	String ssID=entry.getKey();
 	        	StreetSegment ss=entry.getValue();
@@ -192,8 +193,9 @@ public class InterpolationRunner implements Runnable {
 	        	ssCopy.id=ss.id;
 	        	ssCopy.comment=ss.comment;
 	        	HashMap<String,ObservationValue> interpolatedData=interpolatedObservations.get(ssID);
-	        	if (interpolatedData==null) {
+	        	if (interpolatedData==null && errorCount<10) {
 	        		log.error("Interpolated data for id {} is {}", ssID, interpolatedData);
+	        		errorCount++;
 	        	}
 	        	ssCopy.exposure=interpolatedObservations.get(ssID);
 	        	
@@ -201,6 +203,7 @@ public class InterpolationRunner implements Runnable {
 	        }
 	        
 	        log.info("Interpolated is {}", interpolated);
+	        log.info("{} segments had no interpolated data", errorCount);
 	        
 		} catch (FileNotFoundException e) {
 			log.error("", e);

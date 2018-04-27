@@ -64,7 +64,7 @@ public class TestExternalInterpolation {
 		regInfo.regionID="testRegion";
 		regInfo.theList=ssl;
 
-		ObservationValue ob1V1=new ObservationValue("3.14", new Property("NO", null), new UnitOfMeasurement("ppm", "ppm", Arrays.asList(new String[] {"no comment"})));
+		ObservationValue ob1V1=new ObservationValue("3.14", new Property("NO", "http://yeah", null), new UnitOfMeasurement("ppm", "ppm", "http://out.of.units", Arrays.asList(new String[] {"no comment"})));
 		ObservationValue[] values=new ObservationValue[] {ob1V1};
 		
 		Observation ob1=new Observation("Sensor1", new WGS84Location(1.1, 1.1, 0.0, null, null), "T1", "T2", Arrays.asList(values));

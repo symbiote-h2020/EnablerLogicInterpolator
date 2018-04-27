@@ -106,8 +106,8 @@ public class TestRegionRegistration {
 		ric.streetSegments.put(ss.id, ss);
 
 		ric.properties=new HashSet<Property>();
-		ric.properties.add(new Property("NO", null));
-		ric.properties.add(new Property("O3", null));
+		ric.properties.add(new Property("NO", "http://neverla.nd/some/semantic", null));
+		ric.properties.add(new Property("O3", "http://neverla.nd/some/semantic", null));
 		
 
 		// Expect...
@@ -130,7 +130,7 @@ public class TestRegionRegistration {
 		
 		
 		assertEquals(1, resourceRequestCapture.getAllValues().size());	// Expect one calls to get resources. 
-																		// Note: Request for moble sensors is commented out
+																		// Note: Request for mobile sensors is commented out
 		
 		// 2. A request for fixed resources should have been generated
 		ResourceManagerTaskInfoRequest request=resourceRequestCapture.getAllValues().get(0);

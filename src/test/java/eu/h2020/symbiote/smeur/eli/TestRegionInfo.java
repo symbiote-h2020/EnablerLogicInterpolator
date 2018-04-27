@@ -22,7 +22,7 @@ public class TestRegionInfo {
 		regInfo.dateRegistered="someDate";
 		
 		regInfo.properties=new HashSet<Property>();
-		regInfo.properties.add(new Property("NO", Arrays.asList(new String[] {"NitrogenOxyde"})));
+		regInfo.properties.add(new Property("NO", "http://neverla.nd/some/semantic", Arrays.asList(new String[] {"NitrogenOxyde"})));
 		
 		regInfo.theList=new StreetSegmentList();
 		

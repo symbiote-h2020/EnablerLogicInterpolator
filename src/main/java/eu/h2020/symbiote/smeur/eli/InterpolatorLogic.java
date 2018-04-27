@@ -3,6 +3,7 @@ package eu.h2020.symbiote.smeur.eli;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import eu.h2020.symbiote.core.internal.CoreQueryRequest;
 import eu.h2020.symbiote.enabler.messaging.model.CancelTaskRequest;
@@ -48,6 +50,7 @@ import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
+import utils.CustomizedToString;
 
 
 @Component
@@ -213,11 +216,22 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		String sslID=taskID.substring(0, colonIndex);
 
+		log.info("Data appeared for sslID "+ sslID);
+
+		
 		boolean knownID=pm.yRegionExists(sslID);
 		if (!knownID)
 			return;
 		
 		log.info("Appeared data makes sense to me. Digesting it.");
+		
+		ObjectMapper om=new ObjectMapper();
+		om.enable(SerializationFeature.INDENT_OUTPUT);
+		try {
+			log.info("querying fixed resources response: {}", om.writeValueAsString(dataAppeared));
+		} catch (JsonProcessingException e) {
+		}
+
 		// Everything checked. Let's start the real work.
 		
 		RegionInformation ri=pm.retrieveRegionInformation(sslID);
@@ -294,6 +308,11 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				RegionInformation ri=pm.retrieveRegionInformation(regID);
 				log.debug("ri is {}", ri);
 
+				if (ri==null) {
+					log.warn("There is no region information for region {}. Skipping it", regID);
+					continue;
+				}
+				
 				StreetSegmentList interpol=pm.retrieveInterpolatedValues(regID);
 
 				Map<String, PoIInformation> resultsForThisRegion=findPoiValuesPerRegion(ri, interpol, poiList);
@@ -314,7 +333,6 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			}
 						
 			result.status=QueryPoiInterpolatedValuesResponse.StatusCode.OK;
-
 			log.debug("Querying PoI's succeeded ok.");
 
 		} catch (NoInterpolationYetException e) {
@@ -379,7 +397,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			
 			// TODO: This behavior is just for testing.
 			// It will provide dummy interpolated values without having measurement values available
-			log.error("Warning: \"Auto\"-interpolation is switched on!!!!");
+//			log.error("Warning: \"Auto\"-interpolation is switched on!!!!");
 			im.startInterpolation(regInfo, null, this);
 			
 			log.info("Region registration passed ok");
@@ -541,22 +559,22 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			Instant cutOffTime, 
 			Set<Property> properties) {
 		
-		List<Observation> result;
+		List<Observation> temporary;
 		
 		if (theOldObs==null && theNewObs==null)
 			return null;
 		
 		if (theOldObs==null)
-			result=new ArrayList<Observation>();
+			temporary=new ArrayList<Observation>();
 		else
-			result=new ArrayList<Observation>(theOldObs);
+			temporary=new ArrayList<Observation>(theOldObs);
 		
 		if (theNewObs!=null) {
-			// Merge the new list in. 
 			
+			// Merge the new list in. 
 			for (Observation obs : theNewObs) {
-				if (!result.contains(obs)) {
-					result.add(obs);
+				if (!temporary.contains(obs)) {
+					temporary.add(obs);
 				}
 			}
 		}
@@ -565,7 +583,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		// Filter by property
 		if (properties != null) {
 			log.info("Filtering by ObsProperties now. List of accepted properties is {}", properties);
-			Iterator<Observation> itO = result.iterator();
+			Iterator<Observation> itO = temporary.iterator();
 			while (itO.hasNext()) {
 				Observation obs = itO.next();
 
@@ -576,7 +594,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 					log.info("Filtering ObservationValue {}", obsValue);
 					Property prop = obsValue.getObsProperty();
 					if (!properties.contains(prop)) {
-						log.info("Property {} not expected --> removing it");
+						log.info("Property {} not expected --> removing it", prop);
 						itV.remove();
 					}
 				}
@@ -587,40 +605,34 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		}
 		
 		// Filter by age of observation
+		log.info("-------------------------Filtering by age now.---------------------------------");
+		
+		List<Observation> result=new ArrayList<Observation>();
+		
 		if (cutOffTime!=null) {
-			Iterator<Observation> it=result.iterator();
+			Iterator<Observation> it=temporary.iterator();
 			while (it.hasNext()) {
 				Observation obs=it.next();
 				String relevantTime=obs.getResultTime();
-				if (relevantTime==null)
+				if (relevantTime==null || relevantTime.isEmpty())
 					relevantTime=obs.getSamplingTime();
 				
-				if (relevantTime==null) {	// Neither time set --> you are FIRED!!
-					it.remove();
+				if (relevantTime==null || relevantTime.isEmpty()) {	// Neither time set --> you are FIRED!!
 					continue;
 				}
 
-				Instant relevantInstant=null;
-				try {
-					LocalDateTime ldt=LocalDateTime.parse(relevantTime);
-					relevantInstant=ldt.toInstant(ZoneOffset.UTC);
-				} catch(java.time.format.DateTimeParseException dt) {
-					
-				}
-				
-				if (relevantInstant==null)
-					try {
-						relevantInstant=Instant.parse(relevantTime);
-					} catch(java.time.format.DateTimeParseException dt) {
-						log.error("Unable to parse timestamp, removing the value", dt);
-						it.remove();
-						continue;
-					}
+				Instant relevantInstant=Utils.parseMultiFormat(relevantTime);
 				
 				if (relevantInstant.isBefore(cutOffTime)) {
-					it.remove();
 					continue;
 				}
+				
+				// Harmonize time formats so the python job has it a bit easier.
+				DateTimeFormatter dtf=DateTimeFormatter.ISO_INSTANT;
+				String newTimeFormat=dtf.format(relevantInstant);
+				
+				Observation obsNew=new Observation(obs.getResourceId(), obs.getLocation(), newTimeFormat, newTimeFormat, obs.getObsValues());
+				result.add(obsNew);
 			}
 		}
 		
@@ -652,7 +664,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		
 //		String samplingPeriod="P0000-00-00T00:10:00";
-		String samplingPeriod="P0000-00-00T00:01:00";	// Speed up sampling for easier debugging
+		String samplingPeriod="P0000-00-00T00:03:00";	// Speed up sampling for easier debugging
 		// Although the sampling period is either 30 mins or 60 mins there is a transmit delay. 
 		// If we miss one reading by just 1 second and we set the interval to 30 mins we
 		// are always 29 mins and 59 late.
@@ -678,42 +690,44 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
                 "interpolator",	// platform ID
                 null); 
 		
-		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
+		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(60*1000, request);
 
 		try {
-			log.info("querying fixed resources response: {}", new ObjectMapper().writeValueAsString(response));
+			ObjectMapper om=new ObjectMapper();
+			om.enable(SerializationFeature.INDENT_OUTPUT);
+			log.info("querying fixed resources response: {}", om.writeValueAsString(response));
 		} catch (JsonProcessingException e) {
 			log.error("Problem with deserializing ResourceManagerAcquisitionStartResponse", e);
 		}
 	}
 
-	protected void queryMobileStations(EnablerLogic el, String consumerID, WGS84Location c, Double r, Set<Property> props) {
-		
-		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
-		request.setTaskId(consumerID+":mobile");
-		request.setEnablerLogicName("interpolator");
-		request.setMinNoResources(1);
-		request.setCachingInterval("P0000-00-00T00:01:00"); // 1 min
-
-		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
-		coreQueryRequest.setLocation_lat(c.getLatitude());
-		coreQueryRequest.setLocation_long(c.getLongitude());
-		coreQueryRequest.setMax_distance((int)(r*1000));
-		
-		List<String> propsAsString=new ArrayList<String>();
-		for (Property p : props) 
-			propsAsString.add(p.getName());
-		coreQueryRequest.setObserved_property(propsAsString);
-		
-		request.setCoreQueryRequest(coreQueryRequest);
-		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
-
-		try {
-			log.info("querying mobile resources: {}", new ObjectMapper().writeValueAsString(response));
-		} catch (JsonProcessingException e) {
-			log.error("Problem with deserializing ResourceManagerAcquisitionStartResponse", e);
-		}
-	}
+//	protected void queryMobileStations(EnablerLogic el, String consumerID, WGS84Location c, Double r, Set<Property> props) {
+//		
+//		ResourceManagerTaskInfoRequest request = new ResourceManagerTaskInfoRequest();
+//		request.setTaskId(consumerID+":mobile");
+//		request.setEnablerLogicName("interpolator");
+//		request.setMinNoResources(1);
+//		request.setCachingInterval("P0000-00-00T00:01:00"); // 1 min
+//
+//		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
+//		coreQueryRequest.setLocation_lat(c.getLatitude());
+//		coreQueryRequest.setLocation_long(c.getLongitude());
+//		coreQueryRequest.setMax_distance((int)(r*1000));
+//		
+//		List<String> propsAsString=new ArrayList<String>();
+//		for (Property p : props) 
+//			propsAsString.add(p.getName());
+//		coreQueryRequest.setObserved_property(propsAsString);
+//		
+//		request.setCoreQueryRequest(coreQueryRequest);
+//		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(request);
+//
+//		try {
+//			log.info("querying mobile resources: {}", new ObjectMapper().writeValueAsString(response));
+//		} catch (JsonProcessingException e) {
+//			log.error("Problem with deserializing ResourceManagerAcquisitionStartResponse", e);
+//		}
+//	}
 
 	private static double distance(WGS84Location p1, WGS84Location p2) {	// "Flat earth" approximation. Approximation valid for "small" distances.
 		

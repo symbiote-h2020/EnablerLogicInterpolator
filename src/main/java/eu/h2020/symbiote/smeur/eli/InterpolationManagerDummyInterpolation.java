@@ -83,7 +83,7 @@ public class InterpolationManagerDummyInterpolation implements InterpolationMana
 		}
 		ss.exposure.clear();
 		
-		UnitOfMeasurement uom=new UnitOfMeasurement("kg/cnm", "kg per cube nautical mile", Arrays.asList(new String[] {"another obscure unit :-)"}));
+		UnitOfMeasurement uom=new UnitOfMeasurement("kg/cnm", "kg per cube nautical mile", "http://semantics.neverland.dreams/sillyUnits#kgcnm", Arrays.asList(new String[] {"another obscure unit :-)"}));
 		
 		ObservationValue obsValue=new ObservationValue(Double.toString(random.nextDouble()*100), prop, uom); 
 		ss.exposure.put(prop.getName(), obsValue);		

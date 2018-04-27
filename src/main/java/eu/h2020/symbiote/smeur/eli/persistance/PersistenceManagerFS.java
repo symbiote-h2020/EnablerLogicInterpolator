@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.smeur.StreetSegmentList;
@@ -279,13 +280,14 @@ public class PersistenceManagerFS implements PersistenceManager {
 			Object doc=constructor.newInstance(id, content);
 
 			ObjectMapper mapper = new ObjectMapper();
-	        String json=null;
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//	        String json=null;
 
-			json = mapper.writeValueAsString(doc);
-			
 			File file=new File(baseDir, id+".json");
 			
-			FileUtils.write(file, json, "UTF-8");
+			mapper.writeValue(file, doc);
+			
+//			FileUtils.write(file, json, "UTF-8");
 			
 			
 
@@ -324,6 +326,10 @@ public class PersistenceManagerFS implements PersistenceManager {
 			e1.printStackTrace();
 			return null;
 		}
+
+		
+		if (json==null || json.isEmpty())
+			return null;
 		
         ObjectMapper mapper = new ObjectMapper();
         Object wrapperDoc=null;
