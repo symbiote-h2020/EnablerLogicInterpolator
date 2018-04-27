@@ -634,6 +634,8 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				Observation obsNew=new Observation(obs.getResourceId(), obs.getLocation(), newTimeFormat, newTimeFormat, obs.getObsValues());
 				result.add(obsNew);
 			}
+		} else {
+			result=temporary;
 		}
 		
 		return result;

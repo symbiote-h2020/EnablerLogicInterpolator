@@ -40,10 +40,9 @@ public class Utils {
 	}
 	
 
-	static DateTimeFormatterBuilder dtfb=new DateTimeFormatterBuilder();
-	
 	static DateTimeFormatter[] formatters=new DateTimeFormatter[] {
-			dtfb.appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").toFormatter()
+			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").toFormatter(),
+			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ssX").toFormatter()
 	};
 	
 	
@@ -57,7 +56,7 @@ public class Utils {
 				Instant someTime=formatter.parse(theTimeString, Instant::from);
 				return someTime;
 			} catch(DateTimeParseException dte) {
-				log.info("Parsing failed for {}", formatter.toString(), dte);				
+//				log.info("Parsing failed for {}", formatter.toString(), dte);				
 			}
 		}
 

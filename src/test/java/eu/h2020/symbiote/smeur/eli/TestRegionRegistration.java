@@ -12,6 +12,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import eu.h2020.symbiote.enabler.messaging.model.ResourceManagerTaskInfoRequest;
 import eu.h2020.symbiote.enablerlogic.EnablerLogic;
@@ -111,8 +112,11 @@ public class TestRegionRegistration {
 		
 
 		// Expect...
+
+		when(elMock.cancelTask(Mockito.anyObject())).thenReturn(null);
+
 		ArgumentCaptor<ResourceManagerTaskInfoRequest> resourceRequestCapture = ArgumentCaptor.forClass(ResourceManagerTaskInfoRequest.class);
-		when(elMock.queryResourceManager(resourceRequestCapture.capture())).thenReturn(null);
+		when(elMock.queryResourceManager(Mockito.anyInt(), resourceRequestCapture.capture())).thenReturn(null);
 		
 		ArgumentCaptor<String> idCapture=ArgumentCaptor.forClass(String.class);
 		ArgumentCaptor<RegionInformation> riCapture=ArgumentCaptor.forClass(RegionInformation.class);
@@ -137,7 +141,7 @@ public class TestRegionRegistration {
 		assertNotNull(request);
 		
 		assertEquals("SomeID:fixed", request.getTaskId());
-		assertEquals("P0000-00-00T00:01:00", request.getQueryInterval());
+		assertEquals("P0000-00-00T00:03:00", request.getQueryInterval());
 		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
 		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
 
