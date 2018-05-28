@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import eu.h2020.symbiote.model.cim.Observation;
 import eu.h2020.symbiote.model.cim.ObservationValue;
@@ -291,6 +292,7 @@ public class InterpolationRunner implements Runnable {
         String json=null;
 
 		try {
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			json = mapper.writeValueAsString(reducedList);
 		} catch (JsonProcessingException e) {
 			// Any problem here can only be due to coding problems (aka "developer too stupid error")
@@ -312,6 +314,7 @@ public class InterpolationRunner implements Runnable {
 		
 		
 		try {
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
 			json = mapper.writeValueAsString(obs);
 		} catch (JsonProcessingException e) {
 			// Any problem here can only be due to coding problems (aka "developer too stupid error")

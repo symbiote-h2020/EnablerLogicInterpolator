@@ -1,9 +1,9 @@
 package eu.h2020.symbiote.smeur.eli;
 
+import java.io.File;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -50,13 +50,13 @@ import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValues;
 import eu.h2020.symbiote.smeur.messages.QueryPoiInterpolatedValuesResponse;
 import eu.h2020.symbiote.smeur.messages.RegisterRegion;
 import eu.h2020.symbiote.smeur.messages.RegisterRegionResponse;
-import utils.CustomizedToString;
 
 
 @Component
 public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.InterpolationDoneHandler {
 	private static final Logger log = LoggerFactory.getLogger(InterpolatorLogic.class);
 	public static InterpolatorLogic theIL;
+	
 	
 	
 	private EnablerLogic enablerLogic;
@@ -73,8 +73,15 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	@Value("${interpolation.minSensors}")
 	Integer minSensors;
 	
+	// Set this to some small value >=3 to reduce the amount of data read from the platforms 
+	@Value("${interpolation.maxSensors:-1}")
+	Integer maxSensors;
 
-	
+	// Use this multiplier to include sensors just outside the registered region.
+	// A factor of 1.0 searches for sensors exactly within the region boundaries.
+	// A factor of 1.1 also would include sensors which are 10% further away from the region center than the boundaries. 
+	@Value("${search.areaSpreadFactor}")
+	Double spreadFactor;
 
 	private boolean yUseCutoff=true;	// Should only be disabled during unit testing. Or do you know another good reason? 
 	
@@ -155,9 +162,32 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 		
 		if (minSensors==null) {
-			log.warn("Minimal number of sensors (interpolation.minSensors) not set. Using a default of 1");
+			log.warn("Minimal number of sensors (interpolation.minSensors) not set. Using a default of 3");
+			minSensors=3;
 		}
 		
+		
+		String osName=System.getProperty("os.name");
+		boolean yWindows=false;
+		if (osName.toUpperCase().contains("WINDOWS"))
+			yWindows=true;
+
+		File interpolatorExec=new File(executableForInterpolation);
+		boolean interpolatorExecOk=false;
+		if (yWindows) {
+			interpolatorExecOk=interpolatorExec.canRead();
+			if (!interpolatorExecOk) {
+				log.error("The file "+executableForInterpolation+" must exist and be readable");
+				System.exit(0);
+			}
+		} else {
+			interpolatorExecOk=interpolatorExec.canExecute();
+			if (!interpolatorExecOk) {
+				log.error("The file "+executableForInterpolation+" must exist and be executable");
+				System.exit(0);
+			}
+		}
+
 		
 		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
 				RegisterRegion.class, 
@@ -205,23 +235,30 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			log.error("measurementReceived called with null as an argument. Cowardly refusing to work further with that.");
 			return;	// Who does send such a mess? A pity we can't give immediate feedback here.
 		}
+
+		
 		
 		String taskID=dataAppeared.getTaskId();
-		int colonIndex=taskID.lastIndexOf(":");
+		log.info("Data appeared for taskID "+ taskID);
+
+
 		
-		if (colonIndex==-1) {
+		String idFields[]=taskID.split(":");
+		
+		if (idFields.length==1) {
 			log.error("Why do you send me ID's I never asked for ("+taskID+")?");
 			return;	// Can't be one of my ID's, can it?
 		}
 		
-		String sslID=taskID.substring(0, colonIndex);
-
-		log.info("Data appeared for sslID "+ sslID);
+		String sslID=idFields[0];
+		log.info("Data appeared for taskID "+ sslID);
 
 		
 		boolean knownID=pm.yRegionExists(sslID);
-		if (!knownID)
+		if (!knownID) {
+			log.info("sslID is not known, leaving data processing");
 			return;
+		}
 		
 		log.info("Appeared data makes sense to me. Digesting it.");
 		
@@ -237,28 +274,29 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		RegionInformation ri=pm.retrieveRegionInformation(sslID);
 		
 		List<Observation> theNewObs=dataAppeared.getObservations();
+		if (maxSensors!=-1) {
+			theNewObs.subList(0, maxSensors);
+			log.warn("List of new observations truncated to a length of {}", maxSensors);
+		}
+		
 //		log.info("The new data. Size={}, data={}", theNewObs.size(), theNewObs);
 		List<Observation> theOldObs=pm.retrieveObservations(sslID);
 //		log.info("The old obs:, size={}, data={}", theOldObs.size(), theOldObs);
 		
 		Instant now=Instant.now();
-//		Instant cutOffTime=now.minusSeconds(2*60*60);
-		Instant cutOffTime=now.minusSeconds(365*24L*60*60);
+		Instant cutOffTime=now.minusSeconds(2*60*60);
+//		Instant cutOffTime=now.minusSeconds(365*24L*60*60);
 		if (!this.yUseCutoff)
 			cutOffTime=null;
-		
 		
 		
 		List<Observation> mergedObservations=mergeObservations(theNewObs, theOldObs, cutOffTime, ri.properties);	// Cutoff 30 mins
 //		log.info("The merged obs, size={}, data={}", mergedObservations.size(), mergedObservations);
 		
 		this.pm.persistObservations(sslID, mergedObservations);
-
-		
-		RegionInformation regInfo=pm.retrieveRegionInformation(sslID);
 		
 		log.info("Data appeared: Starting interpolation.");
-		this.im.startInterpolation(regInfo, mergedObservations, this);
+		this.im.startInterpolation(ri, mergedObservations, this);
 				
 	}
 
@@ -587,14 +625,13 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			while (itO.hasNext()) {
 				Observation obs = itO.next();
 
-				log.info("Filtering observation {}", obs);
+				log.trace("Filtering observation {}", obs);
 				Iterator<ObservationValue> itV = obs.getObsValues().iterator();
 				while (itV.hasNext()) {
 					ObservationValue obsValue = itV.next();
-					log.info("Filtering ObservationValue {}", obsValue);
 					Property prop = obsValue.getObsProperty();
 					if (!properties.contains(prop)) {
-						log.info("Property {} not expected --> removing it", prop);
+						log.debug("Property {} not expected --> removing obsValue", obsValue);
 						itV.remove();
 					}
 				}
@@ -621,7 +658,13 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 					continue;
 				}
 
-				Instant relevantInstant=Utils.parseMultiFormat(relevantTime);
+				Instant relevantInstant=null;
+				try {
+					relevantInstant=Utils.parseMultiFormat(relevantTime);
+				} catch(DateTimeParseException dtpe) {
+					log.error("Problems parsing the timestamp for the observation {}", obs);
+					throw dtpe;
+				}
 				
 				if (relevantInstant.isBefore(cutOffTime)) {
 					continue;
@@ -642,16 +685,31 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 	}
 
 
-	
+
 	protected void queryFixedStations(EnablerLogic el, RegionInformation regInfo) {
+
+		Set<Property> props=regInfo.properties;
+
+		Iterator<Property> it=props.iterator();
+		while (it.hasNext()) {
+			Property prop=it.next();
+
+			boolean last=!it.hasNext();
+			
+			queryFixedStations(el, regInfo, prop, last);
+		}
+		
+	}
+
+	protected void queryFixedStations(EnablerLogic el, RegionInformation regInfo, Property prop, boolean last) {
 		
 		String consumerID=regInfo.regionID;
 		WGS84Location center=regInfo.center;
 		Double radius=regInfo.radius;
-		Set<Property> props=regInfo.properties;
 		
-		
-		String taskID=consumerID+":fixed";
+		String taskID=consumerID+":fixed"+":"+prop.getName();
+		if (last)
+			taskID=taskID+":last";
 		
 		CancelTaskRequest ctr=new CancelTaskRequest();
 		String[] allIds=new String[] {taskID};
@@ -674,12 +732,12 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		CoreQueryRequest coreQueryRequest = new CoreQueryRequest();
 		coreQueryRequest.setLocation_lat(center.getLatitude());
 		coreQueryRequest.setLocation_long(center.getLongitude());
-		coreQueryRequest.setMax_distance((int)(radius*10_000));	// TODO: Should be 1_000. But we need 10.000 for some strange reason
+		coreQueryRequest.setMax_distance((int)(radius*1_000*spreadFactor));
 
-		List<String> propsAsString=new ArrayList<String>();
-		for (Property p : props) 
-			propsAsString.add(p.getName());
-		coreQueryRequest.setObserved_property(propsAsString);
+		List<String> propsAsIRI=new ArrayList<String>();
+		propsAsIRI.add(prop.getIri());
+
+		coreQueryRequest.setObserved_property_iri(propsAsIRI);
 
 		ResourceManagerTaskInfoRequest request=new ResourceManagerTaskInfoRequest(
 				taskID,	// TaskID 
@@ -691,6 +749,7 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
                 true,	// Inform platformproxy 
                 "interpolator",	// platform ID
                 null); 
+
 		
 		ResourceManagerAcquisitionStartResponse response = el.queryResourceManager(60*1000, request);
 

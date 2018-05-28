@@ -42,17 +42,19 @@ public class Utils {
 
 	static DateTimeFormatter[] formatters=new DateTimeFormatter[] {
 			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").toFormatter(),
+			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSX").toFormatter(),
+			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SX").toFormatter(),
 			new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ssX").toFormatter()
 	};
 	
 	
 	
 	public static Instant parseMultiFormat(String theTimeString) {
-		log.info("Parsing the String \"{}\"", theTimeString);
+//		log.debug("Parsing the String \"{}\"", theTimeString);
 		
 		for (DateTimeFormatter formatter : formatters) {
 			try {
-				log.info("Trying to parse with {}", formatter.toString());
+				log.trace("Trying to parse with {}", formatter.toString());
 				Instant someTime=formatter.parse(theTimeString, Instant::from);
 				return someTime;
 			} catch(DateTimeParseException dte) {
@@ -60,7 +62,7 @@ public class Utils {
 			}
 		}
 
-		throw new DateTimeParseException("Unable to parse with any of the given formats:", theTimeString, 0);
+		throw new DateTimeParseException("Unable to parse \""+theTimeString+"\" with any of the given formats:", theTimeString, 0);
 	}
 	
 }

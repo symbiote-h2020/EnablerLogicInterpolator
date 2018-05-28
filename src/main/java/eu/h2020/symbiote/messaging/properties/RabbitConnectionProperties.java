@@ -5,8 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix="rabbit", ignoreInvalidFields=true)
 public class RabbitConnectionProperties {
 	private String host = "localhost";
-	private String username = "guest";
-	private String password = "guest";
+	private String username = "interpolator";
+	private String password = "interpolator";
 	
 	public String getHost() {
 		return host;

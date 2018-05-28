@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        springBootVersion = '1.5.9.RELEASE'
+        springBootVersion = '1.5.10.RELEASE'
     }
     repositories {
         mavenCentral()
@@ -86,11 +86,11 @@ dependencies {
             3) project dependency requires changes in settings.gradle file in this project
             4) never commit build.gradle which has project dependencies active as it will break CI builds
     */
-    compile('com.github.symbiote-h2020:SymbIoTeLibraries:5.+') { changing = true }
+//    compile('com.github.symbiote-h2020:SymbIoTeLibraries:5.+') { changing = true }
 
 //    compile('com.github.symbiote-h2020:SymbIoTeLibraries:property_uom_iri_implementation-SNAPSHOT') {changing=true}
     
-    compile('com.github.symbiote-h2020:EnablerLogic:develop-SNAPSHOT')
+    compile('com.github.symbiote-h2020:EnablerLogic:0.3.2')
     compile('com.github.symbiote-h2020:SMEURLibraries:develop-SNAPSHOT')
     
 
@@ -100,11 +100,11 @@ dependencies {
     compile('org.springframework.cloud:spring-cloud-starter-config')
     compile('org.springframework.cloud:spring-cloud-starter-eureka')
     compile('org.springframework.cloud:spring-cloud-starter-zipkin')
-    compile('org.springframework.cloud:spring-cloud-starter-feign')
-    compile("org.springframework.boot:spring-boot-starter-web")
-    compile('org.springframework.boot:spring-boot-starter-amqp')
-    compile('org.springframework.boot:spring-boot-starter-data-rest')
-    compile('org.springframework.boot:spring-boot-starter-web')
+//    compile('org.springframework.cloud:spring-cloud-starter-feign')
+//    compile("org.springframework.boot:spring-boot-starter-web")
+//    compile('org.springframework.boot:spring-boot-starter-amqp')
+//    compile('org.springframework.boot:spring-boot-starter-data-rest')
+//    compile('org.springframework.boot:spring-boot-starter-web')
     compile('org.springframework.boot:spring-boot-starter-data-mongodb')
     compile('org.mongodb:mongo-java-driver:3.5.0')
     
