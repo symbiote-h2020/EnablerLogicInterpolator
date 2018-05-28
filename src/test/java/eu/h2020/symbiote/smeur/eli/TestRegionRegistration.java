@@ -38,6 +38,8 @@ public class TestRegionRegistration {
 		
 		il.interpolationMethod="dummy";
 		il.setPersistenceManager(pmMock);
+		il.spreadFactor=1.0;
+		
 		il.initialization(elMock);
 		
 		reset(elMock);	
@@ -140,7 +142,7 @@ public class TestRegionRegistration {
 		ResourceManagerTaskInfoRequest request=resourceRequestCapture.getAllValues().get(0);
 		assertNotNull(request);
 		
-		assertEquals("SomeID:fixed", request.getTaskId());
+		assertEquals("SomeID:fixed:NO:last", request.getTaskId());
 		assertEquals("P0000-00-00T00:03:00", request.getQueryInterval());
 		assertEquals(3.0, request.getCoreQueryRequest().getLocation_long(), 1E-3);
 		assertEquals(4.0, request.getCoreQueryRequest().getLocation_lat(), 1E-3);
@@ -149,7 +151,7 @@ public class TestRegionRegistration {
 // This factor of 10 is needed to get things running but nobody really understands why.
 //		assertEquals((Integer)314291, request.getCoreQueryRequest().getMax_distance());	// Should roughly be 628.5/2.0; calculated by a service in the internet. But note, that the internet servie will have used a more accurate algorithm.
 		
-		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property().size());
+		assertEquals(ric.properties.size(), request.getCoreQueryRequest().getObserved_property_iri().size());
 		
 		// 3. A request for mobile resources should have been generated.
 		// TODO: How are fixed and mobile resources distinguished. 

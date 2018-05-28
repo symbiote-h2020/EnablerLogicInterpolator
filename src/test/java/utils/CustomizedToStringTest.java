@@ -21,7 +21,7 @@ public class CustomizedToStringTest {
 		CoreQueryRequest cqr=new CoreQueryRequest();
 		ResourceManagerAcquisitionStartResponse r=new ResourceManagerAcquisitionStartResponse();
 		
-		ResourceManagerTaskInfoResponse tir=new ResourceManagerTaskInfoResponse(null, null, cqr, null, null, null, null, null, null, null, null, null, null);
+		ResourceManagerTaskInfoResponse tir=new ResourceManagerTaskInfoResponse(null, null, cqr, null, null, null, null, null, null, null, null, null, null, null);
 		
 		List<ResourceManagerTaskInfoResponse> tasks=new ArrayList<ResourceManagerTaskInfoResponse>();
 		tasks.add(tir);

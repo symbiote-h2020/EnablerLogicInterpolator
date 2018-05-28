@@ -172,22 +172,23 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		if (osName.toUpperCase().contains("WINDOWS"))
 			yWindows=true;
 
-		File interpolatorExec=new File(executableForInterpolation);
-		boolean interpolatorExecOk=false;
-		if (yWindows) {
-			interpolatorExecOk=interpolatorExec.canRead();
-			if (!interpolatorExecOk) {
-				log.error("The file "+executableForInterpolation+" must exist and be readable");
-				System.exit(0);
-			}
-		} else {
-			interpolatorExecOk=interpolatorExec.canExecute();
-			if (!interpolatorExecOk) {
-				log.error("The file "+executableForInterpolation+" must exist and be executable");
-				System.exit(0);
+		if (executableForInterpolation!=null) {	// Should never be null if run in spring context. But is null for unit testing!
+			File interpolatorExec=new File(executableForInterpolation);
+			boolean interpolatorExecOk=false;
+			if (yWindows) {
+				interpolatorExecOk=interpolatorExec.canRead();
+				if (!interpolatorExecOk) {
+					log.error("The file "+executableForInterpolation+" must exist and be readable");
+					System.exit(0);
+				}
+			} else {
+				interpolatorExecOk=interpolatorExec.canExecute();
+				if (!interpolatorExecOk) {
+					log.error("The file "+executableForInterpolation+" must exist and be executable");
+					System.exit(0);
+				}
 			}
 		}
-
 		
 		enablerLogic.registerSyncMessageFromEnablerLogicConsumer(
 				RegisterRegion.class, 
@@ -201,9 +202,9 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 				QueryPoiInterpolatedValues.class, 
 			    (m) -> this.queryPoiValues(m));
 
-		enablerLogic.registerAsyncMessageFromEnablerLogicConsumer(
-				DebugAction.class, 
-			    (m) -> this.debugAction(m));
+//		enablerLogic.registerAsyncMessageFromEnablerLogicConsumer(
+//				DebugAction.class, 
+//			    (m) -> this.debugAction(m));
 
 		
 //		for (int i=0; i<2; i++) {
@@ -221,10 +222,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 
 	}
 
-	private void debugAction(DebugAction m) {
-		System.out.println("Debug debug");
-		return;
-	}
+//	private void debugAction(DebugAction m) {
+//		System.out.println("Debug debug");
+//		return;
+//	}
 
 
 	@Override
@@ -275,7 +276,10 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 		
 		List<Observation> theNewObs=dataAppeared.getObservations();
 		if (maxSensors!=-1) {
-			theNewObs.subList(0, maxSensors);
+			int max=maxSensors;
+			if (theNewObs.size()<max)
+				max=theNewObs.size();
+			theNewObs.subList(0, max);
 			log.warn("List of new observations truncated to a length of {}", maxSensors);
 		}
 		
@@ -444,6 +448,8 @@ public class InterpolatorLogic implements ProcessingLogic, InterpolationManager.
 			log.error("Problems when registering a region:", t);
 			result.status=RegisterRegionResponse.StatusCode.ERROR;
 			result.explanation=t.getMessage();
+			if (result.explanation==null)
+				result.explanation=t.toString();
 		}
 		
 		log.info("Sending a response of\n"+result);

@@ -35,6 +35,9 @@ public class TestReceiveNewObservations {
 		
 		il.setPersistenceManager(pmMock);
 		il.setInterpolationManager(imMock);
+		il.maxSensors=3;
+		
+		
 		il.initialization(elMock);
 		reset(pmMock);	// the above call has called init on pmMock.
 	}
